@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OnlineStore.API/OnlineStore.API.csproj" />
+    <Project Path="src/OnlineStore.Application/OnlineStore.Application.csproj" Id="3e13b352-74e1-4bec-92e9-551a9afba523" />
+    <Project Path="src/OnlineStore.Domain/OnlineStore.Domain.csproj" Id="c6995c60-5eaa-463c-96a6-205e48caf121" />
+    <Project Path="src/OnlineStore.ExternalServices/OnlineStore.ExternalServices.csproj" Id="a2220ed6-88e8-4322-aae7-a49fb27c91df" />
+    <Project Path="src/OnlineStore.Functions/OnlineStore.Functions.csproj" />
+    <Project Path="src/OnlineStore.Persistence/OnlineStore.Persistence.csproj" Id="52adf7cb-c9b3-4a7f-9427-5ea5506702ce" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>

@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "OnlineStore.Functions": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7165",
+      "launchBrowser": false
+    }
+  }
+}
