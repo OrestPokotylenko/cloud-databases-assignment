@@ -1,6 +1,36 @@
 @OnlineStore.API_HostAddress = http://localhost:5053
 
-GET {{OnlineStore.API_HostAddress}}/weatherforecast/
+### Create a product
+POST {{OnlineStore.API_HostAddress}}/api/v1/products
+Content-Type: application/json
+
+{
+  "name": "Cloud Widget",
+  "description": "A sample product",
+  "price": 19.95,
+  "stockQuantity": 25
+}
+
+### List products
+GET {{OnlineStore.API_HostAddress}}/api/v1/products?pageNumber=1&pageSize=20
+Accept: application/json
+
+### Get, update, or delete a product by its public ID
+@ProductId = 00000000-0000-0000-0000-000000000000
+
+GET {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}
 Accept: application/json
 
 ###
+PUT {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}
+Content-Type: application/json
+
+{
+  "name": "Updated Cloud Widget",
+  "description": "Updated sample product",
+  "price": 24.95,
+  "stockQuantity": 20
+}
+
+###
+DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}

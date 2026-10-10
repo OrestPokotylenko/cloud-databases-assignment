@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Packages.props" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/OnlineStore.API/OnlineStore.API.csproj" />
     <Project Path="src/OnlineStore.Application/OnlineStore.Application.csproj" Id="3e13b352-74e1-4bec-92e9-551a9afba523" />
@@ -7,5 +10,7 @@
     <Project Path="src/OnlineStore.Functions/OnlineStore.Functions.csproj" />
     <Project Path="src/OnlineStore.Persistence/OnlineStore.Persistence.csproj" Id="52adf7cb-c9b3-4a7f-9427-5ea5506702ce" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/OnlineStore.Application.UnitTests/OnlineStore.Application.UnitTests.csproj" />
+  </Folder>
 </Solution>
