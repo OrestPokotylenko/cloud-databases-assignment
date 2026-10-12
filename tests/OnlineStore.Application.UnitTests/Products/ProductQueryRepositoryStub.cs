@@ -2,7 +2,7 @@ using OnlineStore.Application.Products.Abstractions;
 
 namespace OnlineStore.Application.UnitTests.Products;
 
-internal sealed class ProductQueryRepositoryStub : IProductQueryRepository
+internal class ProductQueryRepositoryStub : IProductQueryRepository
 {
     public ProductData? Product { get; set; }
     public ProductPageData Page { get; set; } = new([], 0);

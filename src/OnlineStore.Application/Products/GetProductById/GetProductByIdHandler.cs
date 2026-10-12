@@ -3,7 +3,7 @@ using OnlineStore.Application.Products.Abstractions;
 
 namespace OnlineStore.Application.Products.GetProductById;
 
-public sealed class GetProductByIdHandler(
+public class GetProductByIdHandler(
     IProductQueryRepository productRepository)
     : IHandler<GetProductByIdQuery, GetProductByIdResult?>
 {

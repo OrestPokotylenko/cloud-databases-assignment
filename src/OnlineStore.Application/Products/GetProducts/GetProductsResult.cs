@@ -1,6 +1,6 @@
 namespace OnlineStore.Application.Products.GetProducts;
 
-public sealed record GetProductsResult(
+public record GetProductsResult(
     int PageNumber,
     int PageSize,
     int TotalCount,

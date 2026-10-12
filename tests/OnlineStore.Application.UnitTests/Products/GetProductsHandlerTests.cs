@@ -5,7 +5,7 @@ using Xunit;
 
 namespace OnlineStore.Application.UnitTests.Products;
 
-public sealed class GetProductsHandlerTests
+public class GetProductsHandlerTests
 {
     [Fact]
     public async Task HandleAsync_ValidPage_ReturnsMappedPage()

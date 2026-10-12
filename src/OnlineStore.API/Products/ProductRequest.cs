@@ -2,11 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace OnlineStore.API.Products;
 
-public sealed class ProductRequest
+public class ProductRequest
 {
     [Required]
     [StringLength(200)]
-    public string Name { get; init; } = null!;
+    public required string Name { get; init; }
 
     [StringLength(2000)]
     public string? Description { get; init; }

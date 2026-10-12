@@ -3,7 +3,7 @@ using OnlineStore.Domain.Products.Entities;
 
 namespace OnlineStore.Application.UnitTests.Products;
 
-internal sealed class ProductCommandRepositoryStub : IProductCommandRepository
+internal class ProductCommandRepositoryStub : IProductCommandRepository
 {
     public Product? AddedProduct { get; private set; }
     public ProductUpdate? ReceivedUpdate { get; private set; }

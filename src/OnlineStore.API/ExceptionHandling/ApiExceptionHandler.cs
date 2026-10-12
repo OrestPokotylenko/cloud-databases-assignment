@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Diagnostics;
 
 namespace OnlineStore.API.ExceptionHandling;
 
-public sealed class ApiExceptionHandler(
+public class ApiExceptionHandler(
     ILogger<ApiExceptionHandler> logger)
     : IExceptionHandler
 {

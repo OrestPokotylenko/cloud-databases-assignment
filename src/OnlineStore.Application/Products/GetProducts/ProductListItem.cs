@@ -1,6 +1,6 @@
 namespace OnlineStore.Application.Products.GetProducts;
 
-public sealed record ProductListItem(
+public record ProductListItem(
     Guid PublicId,
     DateTimeOffset CreatedAt,
     string Name,

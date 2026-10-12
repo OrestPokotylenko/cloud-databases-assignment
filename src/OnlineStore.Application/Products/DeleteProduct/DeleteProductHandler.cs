@@ -3,7 +3,7 @@ using OnlineStore.Application.Products.Abstractions;
 
 namespace OnlineStore.Application.Products.DeleteProduct;
 
-public sealed class DeleteProductHandler(
+public class DeleteProductHandler(
     IProductCommandRepository productRepository)
     : IHandler<DeleteProductCommand, DeleteProductResult>
 {

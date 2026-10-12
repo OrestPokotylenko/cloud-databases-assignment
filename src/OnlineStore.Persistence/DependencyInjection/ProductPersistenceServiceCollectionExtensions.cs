@@ -1,27 +1,18 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using OnlineStore.Application.Products.Abstractions;
 using OnlineStore.Persistence.Products;
 
-namespace OnlineStore.Persistence;
+namespace OnlineStore.Persistence.DependencyInjection;
 
-public static class DependencyInjection
+internal static class ProductPersistenceServiceCollectionExtensions
 {
-    public static IServiceCollection AddPersistence(
-        this IServiceCollection services,
-        string connectionString)
+    public static IServiceCollection AddProductPersistence(
+        this IServiceCollection services)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-
-        services.AddDbContext<OnlineStoreDbContext>(options =>
-            options.UseSqlServer(connectionString));
-
         services.AddScoped<ProductRepository>();
-
         services.AddScoped<IProductCommandRepository>(provider =>
             provider.GetRequiredService<ProductRepository>());
-
         services.AddScoped<IProductQueryRepository>(provider =>
             provider.GetRequiredService<ProductRepository>());
 

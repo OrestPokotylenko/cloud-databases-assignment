@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace OnlineStore.Application.Abstractions.CQRS;
 
-internal sealed class RequestSender(
+internal class RequestSender(
     IServiceProvider serviceProvider)
     : IRequestSender
 {

@@ -7,22 +7,17 @@ using OnlineStore.Application.Products.GetProductById;
 using OnlineStore.Application.Products.GetProducts;
 using OnlineStore.Application.Products.UpdateProduct;
 
-namespace OnlineStore.Application;
+namespace OnlineStore.Application.DependencyInjection;
 
-public static class DependencyInjection
+internal static class ProductServiceCollectionExtensions
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddProductServices(
+        this IServiceCollection services)
     {
-        services.AddScoped<IRequestSender, RequestSender>();
-
         services.AddScoped<IHandler<CreateProductCommand, CreateProductResult>, CreateProductHandler>();
-
         services.AddScoped<IHandler<UpdateProductCommand, UpdateProductResult>, UpdateProductHandler>();
-
         services.AddScoped<IHandler<DeleteProductCommand, DeleteProductResult>, DeleteProductHandler>();
-
         services.AddScoped<IHandler<GetProductByIdQuery, GetProductByIdResult?>, GetProductByIdHandler>();
-
         services.AddScoped<IHandler<GetProductsQuery, GetProductsResult>, GetProductsHandler>();
 
         return services;

@@ -5,7 +5,7 @@ using OnlineStore.Domain.Products.Entities;
 
 namespace OnlineStore.Persistence.Products;
 
-public sealed class ProductRepository(
+public class ProductRepository(
     OnlineStoreDbContext context)
     : IProductCommandRepository, IProductQueryRepository
 {
