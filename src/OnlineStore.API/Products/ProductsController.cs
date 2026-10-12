@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 using Asp.Versioning;
 
@@ -15,7 +15,7 @@ namespace OnlineStore.API.Products;
 [ApiVersion(1)]
 [Route("api/v{version:apiVersion}/products")]
 [ApiController]
-public sealed class ProductsController(
+public class ProductsController(
     IRequestSender sender)
     : ControllerBase
 {

@@ -34,3 +34,48 @@ Content-Type: application/json
 
 ###
 DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}
+
+### Create an order
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders
+Content-Type: application/json
+
+{
+  "customerPublicId": "00000000-0000-0000-0000-000000000001",
+  "customer": {
+    "fullName": "Alex Example",
+    "email": "alex@example.com",
+    "phoneNumber": "+31612345678"
+  },
+  "deliveryAddress": {
+    "street": "Example Street",
+    "houseNumber": "10",
+    "addition": "A",
+    "postalCode": "1000 AA",
+    "city": "Amsterdam",
+    "countryCode": "NL"
+  },
+  "items": [
+    {
+      "productPublicId": "{{ProductId}}",
+      "quantity": 2
+    }
+  ]
+}
+
+### List orders
+GET {{OnlineStore.API_HostAddress}}/api/v1/orders?pageNumber=1&pageSize=20
+Accept: application/json
+
+### Get an order
+@OrderId = 00000000-0000-0000-0000-000000000000
+
+GET {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}
+Accept: application/json
+
+### Update an order status (case-insensitive)
+PUT {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}/status
+Content-Type: application/json
+
+{
+  "status": "processing"
+}

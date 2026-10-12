@@ -4,7 +4,7 @@ using Xunit;
 
 namespace OnlineStore.Application.UnitTests.Products;
 
-public sealed class CreateProductHandlerTests
+public class CreateProductHandlerTests
 {
     [Fact]
     public async Task HandleAsync_ValidCommand_AddsNormalizedProduct()

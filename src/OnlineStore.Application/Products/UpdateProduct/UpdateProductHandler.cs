@@ -4,7 +4,7 @@ using OnlineStore.Domain.Products;
 
 namespace OnlineStore.Application.Products.UpdateProduct;
 
-public sealed class UpdateProductHandler(
+public class UpdateProductHandler(
     IProductCommandRepository productRepository)
     : IHandler<UpdateProductCommand, UpdateProductResult>
 {

@@ -2,7 +2,7 @@ using OnlineStore.Application.Abstractions.CQRS;
 
 namespace OnlineStore.Application.Products.UpdateProduct;
 
-public sealed record UpdateProductCommand(
+public record UpdateProductCommand(
     Guid PublicId,
     string Name,
     string? Description,

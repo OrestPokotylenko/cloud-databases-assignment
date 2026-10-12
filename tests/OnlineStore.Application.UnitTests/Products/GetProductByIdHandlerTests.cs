@@ -5,7 +5,7 @@ using Xunit;
 
 namespace OnlineStore.Application.UnitTests.Products;
 
-public sealed class GetProductByIdHandlerTests
+public class GetProductByIdHandlerTests
 {
     [Fact]
     public async Task HandleAsync_ExistingProduct_ReturnsProduct()

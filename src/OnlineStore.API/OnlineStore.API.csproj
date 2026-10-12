@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OnlineStore.Application\OnlineStore.Application.csproj" />
+    <ProjectReference Include="..\OnlineStore.ExternalServices\OnlineStore.ExternalServices.csproj" />
     <ProjectReference Include="..\OnlineStore.Persistence\OnlineStore.Persistence.csproj" />
   </ItemGroup>
 

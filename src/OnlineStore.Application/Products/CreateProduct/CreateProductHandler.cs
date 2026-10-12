@@ -4,7 +4,7 @@ using OnlineStore.Domain.Products.Entities;
 
 namespace OnlineStore.Application.Products.CreateProduct;
 
-public sealed class CreateProductHandler(
+public class CreateProductHandler(
     IProductCommandRepository productRepository)
     : IHandler<CreateProductCommand, CreateProductResult>
 {

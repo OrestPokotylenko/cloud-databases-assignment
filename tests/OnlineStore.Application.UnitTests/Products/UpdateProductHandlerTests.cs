@@ -4,7 +4,7 @@ using Xunit;
 
 namespace OnlineStore.Application.UnitTests.Products;
 
-public sealed class UpdateProductHandlerTests
+public class UpdateProductHandlerTests
 {
     [Fact]
     public async Task HandleAsync_ValidCommand_ForwardsNormalizedUpdate()

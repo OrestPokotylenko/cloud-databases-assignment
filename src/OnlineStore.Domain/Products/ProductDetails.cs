@@ -1,6 +1,6 @@
 namespace OnlineStore.Domain.Products;
 
-public sealed record ProductDetails
+public record ProductDetails
 {
     public ProductDetails(
         string name,

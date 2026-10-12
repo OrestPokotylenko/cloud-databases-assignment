@@ -1,3 +1,3 @@
 namespace OnlineStore.Application.Products.UpdateProduct;
 
-public sealed record UpdateProductResult(bool Updated);
+public record UpdateProductResult(bool Updated);

@@ -1,6 +1,6 @@
 namespace OnlineStore.API.ExceptionHandling;
 
-public sealed record ApiErrorResponse(
+public record ApiErrorResponse(
     string Title,
     string Errors,
     string TraceId);

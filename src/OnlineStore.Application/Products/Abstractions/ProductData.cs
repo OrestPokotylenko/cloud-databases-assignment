@@ -1,6 +1,6 @@
 namespace OnlineStore.Application.Products.Abstractions;
 
-public sealed record ProductData(
+public record ProductData(
     Guid PublicId,
     DateTimeOffset CreatedAt,
     string Name,

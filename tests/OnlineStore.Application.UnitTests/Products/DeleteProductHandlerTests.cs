@@ -4,7 +4,7 @@ using Xunit;
 
 namespace OnlineStore.Application.UnitTests.Products;
 
-public sealed class DeleteProductHandlerTests
+public class DeleteProductHandlerTests
 {
     [Fact]
     public async Task HandleAsync_ExistingProduct_ReturnsDeleted()

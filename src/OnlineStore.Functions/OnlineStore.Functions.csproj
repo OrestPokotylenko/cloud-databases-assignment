@@ -13,9 +13,15 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.OpenTelemetry" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
-    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OnlineStore.Application\OnlineStore.Application.csproj" />
+    <ProjectReference Include="..\OnlineStore.ExternalServices\OnlineStore.ExternalServices.csproj" />
+    <ProjectReference Include="..\OnlineStore.Persistence\OnlineStore.Persistence.csproj" />
   </ItemGroup>
 
 </Project>
