@@ -1,13 +1,17 @@
 param entraAdministratorClientId string
 param entraAdministratorName string
 param entraAdministratorTenantId string
+param environmentName string
 param location string
-param resourceNamePrefix string
 param resourceSuffix string
 param settings object
 
-var serverName = take(toLower('${resourceNamePrefix}-sql-${resourceSuffix}'), 63)
-var databaseName = '${resourceNamePrefix}-db'
+@minLength(3)
+param workloadName string
+
+var uniqueSuffix = take(resourceSuffix, 5)
+var serverName = take(toLower('sql-${workloadName}-${environmentName}-${uniqueSuffix}'), 63)
+var databaseName = 'sqldb-${workloadName}-${environmentName}'
 
 resource server 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: serverName

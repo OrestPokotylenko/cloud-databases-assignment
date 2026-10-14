@@ -72,7 +72,7 @@ jobs:
         id: infrastructure
         shell: bash
         run: |
-          deployment_name="onlinestore-${DEPLOYMENT_ENVIRONMENT}-${GITHUB_RUN_NUMBER}"
+          deployment_name="deploy-onlinestore-${DEPLOYMENT_ENVIRONMENT}-${GITHUB_RUN_NUMBER}"
 
           az deployment sub create \
             --name "$deployment_name" \

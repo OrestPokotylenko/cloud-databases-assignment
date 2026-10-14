@@ -9,12 +9,15 @@ param location string
 @secure()
 param queueStorageConnectionString string
 
-param resourceNamePrefix string
 param resourceSuffix string
 param updateOrderStatusQueueName string
 
-var registryName = take('acr00${replace('${resourceNamePrefix}${resourceSuffix}', '-', '')}', 50)
-var containerAppName = '${resourceNamePrefix}-api'
+@minLength(3)
+param workloadName string
+
+var uniqueSuffix = take(resourceSuffix, 5)
+var registryName = take(toLower('cr${workloadName}${environmentName}${uniqueSuffix}'), 50)
+var containerAppName = 'ca-${workloadName}-${environmentName}'
 
 resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: registryName
@@ -29,7 +32,7 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
 }
 
 resource pullIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${resourceNamePrefix}-api-identity'
+  name: 'id-${workloadName}-api-${environmentName}'
   location: location
 }
 
@@ -48,30 +51,12 @@ resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: '${resourceNamePrefix}-logs'
-  location: location
-  properties: {
-    features: {
-      enableLogAccessUsingOnlyResourcePermissions: true
-    }
-    retentionInDays: 30
-    sku: {
-      name: 'PerGB2018'
-    }
-  }
-}
-
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: '${resourceNamePrefix}-cae'
+  name: 'cae-${workloadName}-${environmentName}'
   location: location
   properties: {
     appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: logAnalytics.properties.customerId
-        sharedKey: listKeys(logAnalytics.id, '2022-10-01').primarySharedKey
-      }
+      destination: 'none'
     }
     workloadProfiles: [
       {

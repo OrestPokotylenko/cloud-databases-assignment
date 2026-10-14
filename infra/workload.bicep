@@ -12,20 +12,20 @@ param sqlEntraAdministratorTenantId string
 param sqlSettings object
 param workloadName string
 
-var resourceNamePrefix = '${workloadName}-${environmentName}'
 var createOrderQueueName = 'order-create'
 var updateOrderStatusQueueName = 'order-status-update'
 
 module storage './modules/storage.bicep' = {
   name: 'storage'
   params: {
+    environmentName: environmentName
     location: location
     queueNames: [
       createOrderQueueName
       updateOrderStatusQueueName
     ]
-    resourceNamePrefix: resourceNamePrefix
     resourceSuffix: resourceSuffix
+    workloadName: workloadName
   }
 }
 
@@ -35,10 +35,11 @@ module sql './modules/sql.bicep' = {
     entraAdministratorClientId: sqlEntraAdministratorClientId
     entraAdministratorName: sqlEntraAdministratorName
     entraAdministratorTenantId: sqlEntraAdministratorTenantId
+    environmentName: environmentName
     location: location
-    resourceNamePrefix: resourceNamePrefix
     resourceSuffix: resourceSuffix
     settings: sqlSettings
+    workloadName: workloadName
   }
 }
 
@@ -55,9 +56,9 @@ module containerPlatform './modules/container-platform.bicep' = {
     environmentName: environmentName
     location: location
     queueStorageConnectionString: storageConnectionString
-    resourceNamePrefix: resourceNamePrefix
     resourceSuffix: resourceSuffix
     updateOrderStatusQueueName: updateOrderStatusQueueName
+    workloadName: workloadName
   }
 }
 
@@ -68,15 +69,16 @@ module functions './modules/function-app.bicep' = {
     databaseName: sql.outputs.databaseName
     databaseServerFullyQualifiedDomainName: sql.outputs.serverFullyQualifiedDomainName
     deploymentContainerUri: storage.outputs.deploymentContainerUri
+    environmentName: environmentName
     functionAppSettings: functionAppSettings
     location: location
     queueStorageConnectionString: storageConnectionString
-    resourceNamePrefix: resourceNamePrefix
     resourceSuffix: resourceSuffix
     storageAccountId: storage.outputs.storageAccountId
     storageAccountName: storage.outputs.storageAccountName
     storageConnectionString: storageConnectionString
     updateOrderStatusQueueName: updateOrderStatusQueueName
+    workloadName: workloadName
   }
 }
 
