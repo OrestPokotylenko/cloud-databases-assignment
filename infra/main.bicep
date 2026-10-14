@@ -10,7 +10,8 @@ param environmentName string
 @description('Azure region for all resources.')
 param location string = 'francecentral'
 
-@description('Short workload name used in resource names.')
+@description('Short lowercase alphanumeric workload name used in resource names.')
+@minLength(3)
 param workloadName string = 'onlinestore'
 
 @description('Container App compute and scaling configuration.')
@@ -22,10 +23,10 @@ param functionAppSettings object
 @description('Azure SQL Database compute and storage configuration.')
 param sqlSettings object
 
-@description('Display name of the Microsoft Entra application used by the deployment pipeline.')
+@description('Name of the user-assigned managed identity used by the deployment pipeline.')
 param sqlEntraAdministratorName string
 
-@description('Application/client ID of the Microsoft Entra application used by the deployment pipeline.')
+@description('Client ID of the user-assigned managed identity used by the deployment pipeline.')
 param sqlEntraAdministratorClientId string
 
 @description('API image. The deployment pipeline replaces the bootstrap image after pushing to ACR.')

@@ -2,13 +2,13 @@ param createOrderQueueName string
 param databaseName string
 param databaseServerFullyQualifiedDomainName string
 param deploymentContainerUri string
+param environmentName string
 param functionAppSettings object
 param location string
 
 @secure()
 param queueStorageConnectionString string
 
-param resourceNamePrefix string
 param resourceSuffix string
 param storageAccountId string
 param storageAccountName string
@@ -18,7 +18,11 @@ param storageConnectionString string
 
 param updateOrderStatusQueueName string
 
-var functionAppName = take('${resourceNamePrefix}-functions-${resourceSuffix}', 60)
+@minLength(3)
+param workloadName string
+
+var uniqueSuffix = take(resourceSuffix, 5)
+var functionAppName = take('func-${workloadName}-${environmentName}-${uniqueSuffix}', 60)
 var blobDataContributorRoleId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
@@ -29,7 +33,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing 
 }
 
 resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${resourceNamePrefix}-functions-identity'
+  name: 'id-${workloadName}-functions-${environmentName}'
   location: location
 }
 
@@ -46,7 +50,7 @@ resource deploymentStorageAccess 'Microsoft.Authorization/roleAssignments@2022-0
 }
 
 resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
-  name: '${resourceNamePrefix}-functions-plan'
+  name: 'asp-${workloadName}-functions-${environmentName}'
   location: location
   kind: 'functionapp'
   sku: {
@@ -96,10 +100,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'AzureWebJobsStorage'
           value: storageConnectionString
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'dotnet-isolated'
         }
         {
           name: 'Database__ConnectionString'

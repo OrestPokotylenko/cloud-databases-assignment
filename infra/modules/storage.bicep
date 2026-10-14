@@ -1,9 +1,13 @@
+param environmentName string
 param location string
 param queueNames array
-param resourceNamePrefix string
 param resourceSuffix string
 
-var storageAccountName = take('st0${replace('${resourceNamePrefix}${resourceSuffix}', '-', '')}', 24)
+@minLength(3)
+param workloadName string
+
+var uniqueSuffix = take(resourceSuffix, 5)
+var storageAccountName = take(toLower('st${workloadName}${environmentName}${uniqueSuffix}'), 24)
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName

@@ -122,7 +122,14 @@ The subscription-scoped entry point is `infra/main.bicep`. Its modules deploy:
 - an Azure SQL logical server and serverless General Purpose database;
 - Microsoft Entra-only SQL authentication;
 - managed identities and least-scope pull, deployment, and database permissions;
-- Log Analytics for Container Apps logs.
+- a Container Apps environment with live log streaming and no persisted log workspace.
+
+Azure resources use the `<type>-onlinestore-<environment>` naming convention.
+Globally scoped names add a deterministic five-character suffix, and resources
+that don't allow hyphens omit them. Examples include `func-onlinestore-dev-abc12`,
+`ca-onlinestore-dev`, `cae-onlinestore-dev`, `sql-onlinestore-dev-abc12`,
+`sqldb-onlinestore-dev`, `id-onlinestore-api-dev`, and
+`stonlinestoredevabc12`.
 
 The `dev.bicepparam` and `prod.bicepparam` files contain separate
 `containerAppSettings`, `functionAppSettings`, and `sqlSettings` objects. Their
@@ -134,25 +141,28 @@ values are currently identical:
 - SQL: General Purpose serverless, 0.5 minimum and 2 maximum vCores, 5 GiB,
   locally redundant backup storage, and a 30-minute auto-pause delay.
 
-The deployment identity is configured as the Azure SQL Microsoft Entra
-administrator. The API and Functions use their user-assigned managed identities
-to connect to SQL, so there is no SQL username or password to store. Bicep needs
-the deployment application's display name and client ID when compiling the
-environment parameter files. To validate locally:
+The deployment user-assigned managed identity is configured as the Azure SQL
+Microsoft Entra administrator. The API and Functions use their own
+user-assigned managed identities to connect to SQL, so there is no SQL username
+or password to store. Bicep needs the deployment identity's name and client ID
+when compiling the environment parameter files. To validate locally:
 
 ```powershell
-$env:AZURE_CLIENT_ID = '<application-client-id>'
-$env:AZURE_SQL_ADMINISTRATOR_NAME = '<application-display-name>'
+$env:AZURE_CLIENT_ID = '<managed-identity-client-id>'
+$env:AZURE_SQL_ADMINISTRATOR_NAME = '<managed-identity-name>'
 az bicep lint --file infra/main.bicep
 az bicep build --file infra/main.bicep
 az bicep build-params --file infra/parameters/dev.bicepparam
 ```
 
-You can retrieve the display name after signing in with an account allowed to
-read the service principal:
+You can retrieve the identity name and client ID after signing in to Azure:
 
 ```powershell
-az ad sp show --id '<AZURE_CLIENT_ID>' --query displayName --output tsv
+az identity show `
+  --resource-group '<bootstrap-resource-group>' `
+  --name '<managed-identity-name>' `
+  --query '{name:name, clientId:clientId}' `
+  --output json
 ```
 
 Create protected GitHub environments named `dev` and `prod`, each with these
