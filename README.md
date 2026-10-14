@@ -93,3 +93,94 @@ Example requests are in `src/OnlineStore.API/OnlineStore.API.http`.
 Product specifications are stored in SQL Server. Product image binaries are
 deliberately outside this slice; they should be implemented as a separate blob
 storage feature with only their metadata/reference associated with a product.
+
+## Continuous integration
+
+Pull requests targeting `develop` or `main` run the modular validation workflow
+in `.github/workflows/_validation.yml`. It contains independent jobs for:
+
+- restoring and building the .NET solution and API container;
+- running the xUnit v3 tests;
+- auditing direct and transitive NuGet dependencies and running CodeQL;
+- linting and compiling the Bicep template and both parameter files.
+
+The deployment workflow calls the same reusable validation workflow before it
+can deploy. A push to `develop` deploys `dev`, while a push to `main` deploys
+`prod`. Either environment can also be selected manually through
+`workflow_dispatch`.
+
+## Azure infrastructure
+
+The subscription-scoped entry point is `infra/main.bicep`. Its modules deploy:
+
+- an Azure Container Apps consumption environment and the API Container App;
+- an Azure Container Registry used for the API image;
+- one Flex Consumption Function App containing `CreateOrderFunction` and
+  `UpdateOrderStatusFunction`;
+- an LRS StorageV2 account with the two order queues and Functions deployment
+  container;
+- an Azure SQL logical server and serverless General Purpose database;
+- Microsoft Entra-only SQL authentication;
+- managed identities and least-scope pull, deployment, and database permissions;
+- Log Analytics for Container Apps logs.
+
+The `dev.bicepparam` and `prod.bicepparam` files contain separate
+`containerAppSettings`, `functionAppSettings`, and `sqlSettings` objects. Their
+values are currently identical:
+
+- Container App: France Central, Consumption, 0.5 vCPU, 1 GiB, zero minimum
+  replicas and 2 maximum replicas.
+- Functions: France Central, Flex Consumption, 2,048 MB instances.
+- SQL: General Purpose serverless, 0.5 minimum and 2 maximum vCores, 5 GiB,
+  locally redundant backup storage, and a 30-minute auto-pause delay.
+
+The deployment identity is configured as the Azure SQL Microsoft Entra
+administrator. The API and Functions use their user-assigned managed identities
+to connect to SQL, so there is no SQL username or password to store. Bicep needs
+the deployment application's display name and client ID when compiling the
+environment parameter files. To validate locally:
+
+```powershell
+$env:AZURE_CLIENT_ID = '<application-client-id>'
+$env:AZURE_SQL_ADMINISTRATOR_NAME = '<application-display-name>'
+az bicep lint --file infra/main.bicep
+az bicep build --file infra/main.bicep
+az bicep build-params --file infra/parameters/dev.bicepparam
+```
+
+You can retrieve the display name after signing in with an account allowed to
+read the service principal:
+
+```powershell
+az ad sp show --id '<AZURE_CLIENT_ID>' --query displayName --output tsv
+```
+
+Create protected GitHub environments named `dev` and `prod`, each with these
+secrets:
+
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+
+Add this non-secret environment variable to both GitHub environments:
+
+- `AZURE_SQL_ADMINISTRATOR_NAME`
+
+The Azure identity is authenticated through GitHub OIDC. It needs permission
+to deploy resources and create the narrowly scoped managed-identity role
+assignments; `Contributor` plus `User Access Administrator` at the target
+subscription is sufficient for this assignment deployment.
+
+The deployment workflow validates the real Azure deployment, provisions the
+infrastructure, and applies EF Core migrations through a temporary SQL firewall
+rule using the OIDC-authenticated Azure CLI identity. It then creates contained
+database users for the API and Functions managed identities from their client
+IDs, without requiring Microsoft Graph directory permissions. Finally, it
+builds the API image in ACR, updates the Container App declaratively, and
+publishes the Functions package.
+
+The API container can also be built locally from the repository root:
+
+```powershell
+docker build -f src/OnlineStore.API/Dockerfile -t online-store-api .
+```
