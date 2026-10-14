@@ -73,12 +73,34 @@ jobs:
         shell: bash
         run: |
           deployment_name="deploy-onlinestore-${DEPLOYMENT_ENVIRONMENT}-${GITHUB_RUN_NUMBER}"
+          resource_group="rg-onlinestore-${DEPLOYMENT_ENVIRONMENT}"
 
-          az deployment sub create \
-            --name "$deployment_name" \
-            --location francecentral \
-            --template-file infra/main.bicep \
-            --parameters "infra/parameters/${DEPLOYMENT_ENVIRONMENT}.bicepparam"
+          if ! az deployment sub create \
+              --name "$deployment_name" \
+              --location francecentral \
+              --template-file infra/main.bicep \
+              --parameters "infra/parameters/${DEPLOYMENT_ENVIRONMENT}.bicepparam"; then
+            az deployment sub show \
+              --name "$deployment_name" \
+              --query properties.error \
+              --output jsonc || true
+
+            az deployment group show \
+              --resource-group "$resource_group" \
+              --name "workload-${DEPLOYMENT_ENVIRONMENT}" \
+              --query properties.error \
+              --output jsonc || true
+
+            for module_name in container-platform function-app sql storage; do
+              az deployment group show \
+                --resource-group "$resource_group" \
+                --name "$module_name" \
+                --query properties.error \
+                --output jsonc || true
+            done
+
+            exit 1
+          fi
 
           echo "deployment_name=$deployment_name" >> "$GITHUB_OUTPUT"
           echo "api_url=$(az deployment sub show --name "$deployment_name" --query properties.outputs.apiUrl.value --output tsv)" >> "$GITHUB_OUTPUT"
