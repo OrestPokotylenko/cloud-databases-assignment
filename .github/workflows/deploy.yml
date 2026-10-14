@@ -205,11 +205,14 @@ jobs:
           login_server="$(az acr show --name "$registry_name" --query loginServer --output tsv)"
           image="$login_server/online-store-api:${GITHUB_SHA}"
 
-          az acr build \
-            --registry "$registry_name" \
-            --image "online-store-api:${GITHUB_SHA}" \
+          az acr login --name "$registry_name"
+
+          docker build \
             --file src/OnlineStore.API/Dockerfile \
+            --tag "$image" \
             .
+
+          docker push "$image"
 
           echo "image=$image" >> "$GITHUB_OUTPUT"
 
