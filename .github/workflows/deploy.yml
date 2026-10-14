@@ -37,7 +37,9 @@ jobs:
       name: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || 'dev') }}
     env:
       DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || 'dev') }}
+      AZURE_AUTHORITY_HOST: https://login.microsoftonline.com/
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SQL_ADMINISTRATOR_NAME: ${{ vars.AZURE_SQL_ADMINISTRATOR_NAME }}
       DOTNET_NOLOGO: true
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -152,17 +154,40 @@ jobs:
           chmod +x "$RUNNER_TEMP/efbundle"
           "$RUNNER_TEMP/efbundle" --connection "$Database__ConnectionString"
 
+      - name: Prepare SQL workload identity
+        shell: bash
+        run: |
+          token_file="$RUNNER_TEMP/azure-federated-token"
+          umask 077
+
+          curl --fail --silent --show-error \
+            --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange" \
+            | jq --exit-status --raw-output '.value' > "$token_file"
+
+          chmod 600 "$token_file"
+          echo "AZURE_FEDERATED_TOKEN_FILE=$token_file" >> "$GITHUB_ENV"
+
       - name: Grant database access to managed identities
         uses: azure/sql-action@v2.3
         with:
           connection-string: Server=tcp:${{ steps.infrastructure.outputs.sql_server_fqdn }},1433;Initial Catalog=${{ steps.infrastructure.outputs.sql_database_name }};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
           path: devops/sql/grant-managed-identities.sql
+          skip-firewall-check: true
           arguments: >-
             -v
             ApiIdentityName="${{ steps.infrastructure.outputs.api_identity_name }}"
             ApiIdentityClientId="${{ steps.infrastructure.outputs.api_identity_client_id }}"
             FunctionIdentityName="${{ steps.infrastructure.outputs.function_identity_name }}"
             FunctionIdentityClientId="${{ steps.infrastructure.outputs.function_identity_client_id }}"
+
+      - name: Remove SQL workload identity token
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [[ -n "${AZURE_FEDERATED_TOKEN_FILE:-}" ]]; then
+            rm -f -- "$AZURE_FEDERATED_TOKEN_FILE"
+          fi
 
       - name: Remove migration firewall rule
         if: ${{ always() && steps.migration_firewall.outputs.rule_name != '' }}
