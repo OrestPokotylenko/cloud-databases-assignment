@@ -4,11 +4,14 @@ using Asp.Versioning;
 
 using OnlineStore.API.ExceptionHandling;
 using OnlineStore.Application.Abstractions.CQRS;
+using OnlineStore.Application.Orders.Actions;
+using OnlineStore.Application.Orders.CancelOrder;
 using OnlineStore.Application.Orders.CreateOrder;
 using OnlineStore.Application.Orders.GetOrderById;
 using OnlineStore.Application.Orders.GetOrders;
 using OnlineStore.Application.Orders.Messages;
-using OnlineStore.Application.Orders.UpdateOrderStatus;
+using OnlineStore.Application.Orders.ProcessOrder;
+using OnlineStore.Application.Orders.ShipOrder;
 
 namespace OnlineStore.API.Orders;
 
@@ -80,17 +83,43 @@ public class OrdersController(
             result);
     }
 
-    [HttpPut("{publicId:guid}/status")]
-    [ProducesResponseType<UpdateOrderStatusResult>(StatusCodes.Status202Accepted)]
-    [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status400BadRequest)]
+    [HttpPost("{publicId:guid}/process")]
+    [ProducesResponseType<OrderActionResult>(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UpdateOrderStatusResult>> UpdateStatus(
+    public async Task<ActionResult<OrderActionResult>> Process(
         Guid publicId,
-        UpdateOrderStatusRequest request,
         CancellationToken ct)
     {
         var result = await sender.SendAsync(
-            new UpdateOrderStatusCommand(publicId, request.Status),
+            new ProcessOrderCommand(publicId),
+            ct);
+
+        return result.Accepted ? Accepted(result) : NotFound();
+    }
+
+    [HttpPost("{publicId:guid}/ship")]
+    [ProducesResponseType<OrderActionResult>(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OrderActionResult>> Ship(
+        Guid publicId,
+        CancellationToken ct)
+    {
+        var result = await sender.SendAsync(
+            new ShipOrderCommand(publicId),
+            ct);
+
+        return result.Accepted ? Accepted(result) : NotFound();
+    }
+
+    [HttpPost("{publicId:guid}/cancel")]
+    [ProducesResponseType<OrderActionResult>(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OrderActionResult>> Cancel(
+        Guid publicId,
+        CancellationToken ct)
+    {
+        var result = await sender.SendAsync(
+            new CancelOrderCommand(publicId),
             ct);
 
         return result.Accepted ? Accepted(result) : NotFound();

@@ -13,7 +13,7 @@ param sqlSettings object
 param workloadName string
 
 var createOrderQueueName = 'order-create'
-var updateOrderStatusQueueName = 'order-status-update'
+var orderUpdateQueueName = 'order-update'
 
 module storage './modules/storage.bicep' = {
   name: 'storage'
@@ -22,7 +22,7 @@ module storage './modules/storage.bicep' = {
     location: location
     queueNames: [
       createOrderQueueName
-      updateOrderStatusQueueName
+      orderUpdateQueueName
     ]
     resourceSuffix: resourceSuffix
     workloadName: workloadName
@@ -57,7 +57,7 @@ module containerPlatform './modules/container-platform.bicep' = {
     location: location
     queueStorageConnectionString: storageConnectionString
     resourceSuffix: resourceSuffix
-    updateOrderStatusQueueName: updateOrderStatusQueueName
+    orderUpdateQueueName: orderUpdateQueueName
     workloadName: workloadName
   }
 }
@@ -77,7 +77,7 @@ module functions './modules/function-app.bicep' = {
     storageAccountId: storage.outputs.storageAccountId
     storageAccountName: storage.outputs.storageAccountName
     storageConnectionString: storageConnectionString
-    updateOrderStatusQueueName: updateOrderStatusQueueName
+    orderUpdateQueueName: orderUpdateQueueName
     workloadName: workloadName
   }
 }

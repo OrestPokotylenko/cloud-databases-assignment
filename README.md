@@ -22,13 +22,17 @@ Page sizes are limited to 100 records. API consumers use the product's
 - `GET /api/v1/orders?pageNumber=1&pageSize=20`
 - `GET /api/v1/orders/{publicId}`
 - `POST /api/v1/orders`
-- `PUT /api/v1/orders/{publicId}/status`
+- `POST /api/v1/orders/{publicId}/process`
+- `POST /api/v1/orders/{publicId}/ship`
+- `POST /api/v1/orders/{publicId}/cancel`
 
-Order creation and status updates return `202 Accepted`. They are published to
+Order creation and explicit order actions return `202 Accepted`. They are published to
 Azure Storage Queues and processed by `CreateOrderFunction` and
-`UpdateOrderStatusFunction`. Creation verifies and decrements product stock in
+`UpdateOrderFunction`. Creation verifies and decrements product stock in
 the same SQL transaction as the order insert. Cancelling an unshipped order
-restores its stock atomically. Status values are case-insensitive.
+restores its stock atomically. The domain entity permits only pending orders to
+be processed, processing orders to be shipped, and pending or processing orders
+to be cancelled. Shipped and cancelled orders are terminal.
 
 Azure Storage Queues provide at-least-once delivery, so a message can be
 delivered again. Each command therefore carries a `MessageId`, and the
@@ -56,8 +60,9 @@ deployed API environment, provide the settings through the platform's secure
 configuration using `Database__ConnectionString` and
 `Queues__ConnectionString`. Queue names are non-secret options in
 `appsettings.json`; override them with `Queues__CreateOrderQueueName` and
-`Queues__UpdateOrderStatusQueueName` when needed. The Function App also needs
-`AzureWebJobsStorage` and `FUNCTIONS_WORKER_RUNTIME`.
+`Queues__OrderUpdateQueueName` when needed. The local Functions host also needs
+`AzureWebJobsStorage` and `FUNCTIONS_WORKER_RUNTIME`; the deployed Flex
+Consumption runtime is configured through `functionAppConfig` instead.
 
 Install and start Azurite for local Azure Storage Queue development. The
 Functions host needs these local settings through environment variables or an
@@ -71,7 +76,7 @@ ignored `local.settings.json`:
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "Queues:ConnectionString": "UseDevelopmentStorage=true",
     "Queues:CreateOrderQueueName": "order-create",
-    "Queues:UpdateOrderStatusQueueName": "order-status-update",
+    "Queues:OrderUpdateQueueName": "order-update",
     "Database:ConnectionString": "Server=.\\SQLEXPRESS;Database=OnlineStore;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
   }
 }
@@ -85,7 +90,7 @@ dotnet ef database update `
 
 dotnet run --project src/OnlineStore.API
 dotnet run --project src/OnlineStore.Functions
-dotnet test
+dotnet run --project tests/OnlineStore.Application.UnitTests
 ```
 
 Example requests are in `src/OnlineStore.API/OnlineStore.API.http`.
@@ -116,7 +121,7 @@ The subscription-scoped entry point is `infra/main.bicep`. Its modules deploy:
 - an Azure Container Apps consumption environment and the API Container App;
 - an Azure Container Registry used for the API image;
 - one Flex Consumption Function App containing `CreateOrderFunction` and
-  `UpdateOrderStatusFunction`;
+  `UpdateOrderFunction`;
 - an LRS StorageV2 account with the two order queues and Functions deployment
   container;
 - an Azure SQL logical server and serverless General Purpose database;

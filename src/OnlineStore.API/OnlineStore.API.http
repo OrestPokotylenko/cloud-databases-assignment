@@ -72,10 +72,11 @@ Accept: application/json
 GET {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}
 Accept: application/json
 
-### Update an order status (case-insensitive)
-PUT {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}/status
-Content-Type: application/json
+### Process an order
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}/process
 
-{
-  "status": "processing"
-}
+### Ship a processing order
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}/ship
+
+### Cancel a pending or processing order
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}/cancel

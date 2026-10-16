@@ -104,8 +104,8 @@ public class OrderRepository(
         await transaction.CommitAsync(ct);
     }
 
-    public async Task UpdateStatusAsync(
-        UpdateOrderStatusMessage message,
+    public async Task ApplyActionAsync(
+        OrderActionMessage message,
         CancellationToken ct)
     {
         await using var transaction = await context.Database.BeginTransactionAsync(
@@ -124,46 +124,64 @@ public class OrderRepository(
                 ct)
             ?? throw new InvalidOperationException("The order does not exist.");
 
-        var changed = order.UpdateStatus(message.Status, message.RequestedAt);
-        if (changed && message.Status == OrderStatus.Cancelled)
+        switch (message.Action)
         {
-            var productIds = order.Items
-                .Select(item => item.ProductPublicId)
-                .ToList();
-            var products = await context.Products
-                .Where(product => productIds.Contains(product.PublicId))
-                .OrderBy(product => product.Id)
-                .ToListAsync(ct);
-
-            if (products.Count != productIds.Count)
-            {
-                throw new InvalidOperationException(
-                    "The order cannot be cancelled because a product no longer exists.");
-            }
-
-            var quantities = order.Items.ToDictionary(
-                item => item.ProductPublicId,
-                item => item.Quantity);
-            foreach (var product in products)
-            {
-                product.IncreaseStock(quantities[product.PublicId]);
-            }
+            case OrderAction.Process:
+                order.Process(message.RequestedAt);
+                break;
+            case OrderAction.Ship:
+                order.Ship(message.RequestedAt);
+                break;
+            case OrderAction.Cancel:
+                order.Cancel(message.RequestedAt);
+                await RestoreStockAsync(order, ct);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(message),
+                    message.Action,
+                    "The order action is not supported.");
         }
 
-        AddProcessedMessage(message.MessageId, nameof(UpdateOrderStatusMessage));
+        AddProcessedMessage(message.MessageId, nameof(OrderActionMessage));
         await context.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
     }
 
-    public Task<OrderStatus?> GetStatusAsync(
+    private async Task RestoreStockAsync(
+        Order order,
+        CancellationToken ct)
+    {
+        var productIds = order.Items
+            .Select(item => item.ProductPublicId)
+            .ToList();
+        var products = await context.Products
+            .Where(product => productIds.Contains(product.PublicId))
+            .OrderBy(product => product.Id)
+            .ToListAsync(ct);
+
+        if (products.Count != productIds.Count)
+        {
+            throw new InvalidOperationException(
+                "The order cannot be cancelled because a product no longer exists.");
+        }
+
+        var quantities = order.Items.ToDictionary(
+            item => item.ProductPublicId,
+            item => item.Quantity);
+        foreach (var product in products)
+        {
+            product.IncreaseStock(quantities[product.PublicId]);
+        }
+    }
+
+    public Task<bool> ExistsAsync(
         Guid publicId,
         CancellationToken ct)
     {
         return context.Orders
             .AsNoTracking()
-            .Where(order => order.PublicId == publicId)
-            .Select(order => (OrderStatus?)order.Status)
-            .SingleOrDefaultAsync(ct);
+            .AnyAsync(order => order.PublicId == publicId, ct);
     }
 
     public async Task<OrderData?> GetByPublicIdAsync(
@@ -183,7 +201,7 @@ public class OrderRepository(
     {
         var totalCount = await context.Orders.CountAsync(ct);
         var orders = await BaseQuery()
-            .OrderByDescending(order => order.OrderedAt)
+            .OrderByDescending(order => order.OrderDate)
             .ThenByDescending(order => order.Id)
             .Skip(skip)
             .Take(take)
@@ -228,9 +246,10 @@ public class OrderRepository(
         order.DeliveryAddress.City,
         order.DeliveryAddress.CountryCode,
         order.Status,
-        order.OrderedAt,
+        order.OrderDate,
         order.UpdatedAt,
-        order.ShippedAt,
+        order.ShippingDate,
+        order.ProcessingDuration,
         order.TotalAmount,
         order.RejectionReason,
         order.Items.Select(item => new OrderItemData(

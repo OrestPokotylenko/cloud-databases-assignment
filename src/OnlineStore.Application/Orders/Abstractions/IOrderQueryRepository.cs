@@ -1,5 +1,3 @@
-using OnlineStore.Domain.Orders;
-
 namespace OnlineStore.Application.Orders.Abstractions;
 
 public interface IOrderQueryRepository
@@ -13,7 +11,7 @@ public interface IOrderQueryRepository
         int take,
         CancellationToken ct);
 
-    Task<OrderStatus?> GetStatusAsync(
+    Task<bool> ExistsAsync(
         Guid publicId,
         CancellationToken ct);
 }

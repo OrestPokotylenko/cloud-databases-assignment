@@ -6,5 +6,5 @@ public sealed class QueueStorageOptions
 
     public required string ConnectionString { get; init; }
     public required string CreateOrderQueueName { get; init; }
-    public required string UpdateOrderStatusQueueName { get; init; }
+    public required string OrderUpdateQueueName { get; init; }
 }

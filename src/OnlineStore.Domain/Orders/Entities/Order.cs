@@ -21,9 +21,10 @@ public class Order
         private set => deliveryAddress = value;
     }
     public OrderStatus Status { get; private set; }
-    public DateTimeOffset OrderedAt { get; private set; }
+    public DateTimeOffset OrderDate { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
-    public DateTimeOffset? ShippedAt { get; private set; }
+    public DateTimeOffset? ShippingDate { get; private set; }
+    public TimeSpan? ProcessingDuration => ShippingDate - OrderDate;
     public decimal TotalAmount { get; private set; }
     public string? RejectionReason { get; private set; }
     public IReadOnlyCollection<OrderItem> Items => items;
@@ -35,7 +36,7 @@ public class Order
         Guid customerPublicId,
         CustomerDetails customer,
         DeliveryAddress deliveryAddress,
-        DateTimeOffset orderedAt,
+        DateTimeOffset orderDate,
         IEnumerable<OrderItem> orderItems)
     {
         ValidateIdentity(publicId, customerPublicId);
@@ -53,8 +54,8 @@ public class Order
         CustomerPublicId = customerPublicId;
         Customer = customer;
         DeliveryAddress = deliveryAddress;
-        OrderedAt = orderedAt;
-        UpdatedAt = orderedAt;
+        OrderDate = orderDate;
+        UpdatedAt = orderDate;
         Status = OrderStatus.Pending;
         items.AddRange(materializedItems);
         TotalAmount = items.Sum(item => item.LineTotal);
@@ -65,7 +66,7 @@ public class Order
         Guid customerPublicId,
         CustomerDetails customer,
         DeliveryAddress deliveryAddress,
-        DateTimeOffset orderedAt,
+        DateTimeOffset orderDate,
         string reason)
     {
         ValidateIdentity(publicId, customerPublicId);
@@ -79,42 +80,58 @@ public class Order
             CustomerPublicId = customerPublicId,
             Customer = customer,
             DeliveryAddress = deliveryAddress,
-            OrderedAt = orderedAt,
-            UpdatedAt = orderedAt,
+            OrderDate = orderDate,
+            UpdatedAt = orderDate,
             Status = OrderStatus.Rejected,
             RejectionReason = reason.Trim()
         };
     }
 
-    public bool UpdateStatus(
-        OrderStatus status,
-        DateTimeOffset updatedAt)
+    public void Process(DateTimeOffset processedAt)
     {
-        if (status == Status)
-        {
-            return false;
-        }
-
-        if (!CanTransitionTo(status))
-        {
-            throw new InvalidOperationException(
-                $"Order status cannot change from {Status} to {status}.");
-        }
-
-        Status = status;
-        UpdatedAt = updatedAt;
-        if (status == OrderStatus.Shipped)
-        {
-            ShippedAt = updatedAt;
-        }
-
-        return true;
+        EnsureStatus(OrderStatus.Pending, "processed");
+        Status = OrderStatus.Processing;
+        UpdatedAt = processedAt;
     }
 
-    public bool CanTransitionTo(OrderStatus status) =>
-        status == Status ||
-        Status == OrderStatus.Pending && status is OrderStatus.Processing or OrderStatus.Cancelled ||
-        Status == OrderStatus.Processing && status is OrderStatus.Shipped or OrderStatus.Cancelled;
+    public void Ship(DateTimeOffset shippingDate)
+    {
+        EnsureStatus(OrderStatus.Processing, "shipped");
+
+        if (shippingDate < OrderDate)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(shippingDate),
+                "The shipping date cannot be before the order date.");
+        }
+
+        ShippingDate = shippingDate;
+        Status = OrderStatus.Shipped;
+        UpdatedAt = shippingDate;
+    }
+
+    public void Cancel(DateTimeOffset cancelledAt)
+    {
+        if (Status is not OrderStatus.Pending and not OrderStatus.Processing)
+        {
+            throw new InvalidOperationException(
+                $"An order with status {Status} cannot be cancelled.");
+        }
+
+        Status = OrderStatus.Cancelled;
+        UpdatedAt = cancelledAt;
+    }
+
+    private void EnsureStatus(
+        OrderStatus requiredStatus,
+        string action)
+    {
+        if (Status != requiredStatus)
+        {
+            throw new InvalidOperationException(
+                $"An order with status {Status} cannot be {action}.");
+        }
+    }
 
     private static void ValidateIdentity(
         Guid publicId,

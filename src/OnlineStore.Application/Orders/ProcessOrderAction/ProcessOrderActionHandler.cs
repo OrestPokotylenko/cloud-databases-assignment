@@ -3,17 +3,17 @@ using OnlineStore.Application.Abstractions.Messaging;
 using OnlineStore.Application.Orders.Abstractions;
 using OnlineStore.Application.Orders.Messages;
 
-namespace OnlineStore.Application.Orders.ProcessUpdateOrderStatus;
+namespace OnlineStore.Application.Orders.ProcessOrderAction;
 
-public class ProcessUpdateOrderStatusHandler(
+public class ProcessOrderActionHandler(
     IOrderCommandRepository orderRepository)
-    : IHandler<UpdateOrderStatusMessage, QueuedCommandResult>
+    : IHandler<OrderActionMessage, QueuedCommandResult>
 {
     public async Task<QueuedCommandResult> HandleAsync(
-        UpdateOrderStatusMessage request,
+        OrderActionMessage request,
         CancellationToken ct)
     {
-        await orderRepository.UpdateStatusAsync(request, ct);
+        await orderRepository.ApplyActionAsync(request, ct);
         return new QueuedCommandResult();
     }
 }

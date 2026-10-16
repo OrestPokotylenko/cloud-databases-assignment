@@ -25,8 +25,8 @@ public static class QueueServiceCollectionExtensions
                 options => !string.IsNullOrWhiteSpace(options.CreateOrderQueueName),
                 $"{QueueStorageOptions.SectionName}:CreateOrderQueueName is required.")
             .Validate(
-                options => !string.IsNullOrWhiteSpace(options.UpdateOrderStatusQueueName),
-                $"{QueueStorageOptions.SectionName}:UpdateOrderStatusQueueName is required.")
+                options => !string.IsNullOrWhiteSpace(options.OrderUpdateQueueName),
+                $"{QueueStorageOptions.SectionName}:OrderUpdateQueueName is required.")
             .ValidateOnStart();
 
         services.AddSingleton<IMessagePublisher<CreateOrderMessage>>(provider =>
@@ -41,16 +41,16 @@ public static class QueueServiceCollectionExtensions
                     options.CreateOrderQueueName));
         });
 
-        services.AddSingleton<IMessagePublisher<UpdateOrderStatusMessage>>(provider =>
+        services.AddSingleton<IMessagePublisher<OrderActionMessage>>(provider =>
         {
             var options = provider
                 .GetRequiredService<IOptions<QueueStorageOptions>>()
                 .Value;
 
-            return new AzureQueueMessagePublisher<UpdateOrderStatusMessage>(
+            return new AzureQueueMessagePublisher<OrderActionMessage>(
                 CreateQueueClient(
                     options.ConnectionString,
-                    options.UpdateOrderStatusQueueName));
+                    options.OrderUpdateQueueName));
         });
 
         return services;

@@ -32,7 +32,7 @@ public class GetOrdersHandler(
             totalPages,
             page.Orders.Select(order => new OrderListItem(
                 order.PublicId,
-                order.OrderedAt,
+                order.OrderDate,
                 order.Status,
                 order.CustomerFullName,
                 order.TotalAmount)).ToList());

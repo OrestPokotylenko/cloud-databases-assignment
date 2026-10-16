@@ -1,12 +1,11 @@
 using OnlineStore.Application.Abstractions.Messaging;
-using OnlineStore.Domain.Orders;
 
 namespace OnlineStore.Application.Orders.Messages;
 
-public record UpdateOrderStatusMessage(
+public record OrderActionMessage(
     Guid MessageId,
     Guid CorrelationId,
     DateTimeOffset RequestedAt,
     Guid OrderPublicId,
-    OrderStatus Status)
+    OrderAction Action)
     : IQueuedCommand;
