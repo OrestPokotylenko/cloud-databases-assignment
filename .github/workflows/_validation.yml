@@ -59,7 +59,11 @@ jobs:
         run: dotnet restore OnlineStore.slnx
 
       - name: Test
-        run: dotnet test OnlineStore.slnx --configuration Release --no-restore
+        run: >-
+          dotnet run
+          --project tests/OnlineStore.Application.UnitTests/OnlineStore.Application.UnitTests.csproj
+          --configuration Release
+          --no-restore
 
   security:
     name: Security analysis

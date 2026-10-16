@@ -26,13 +26,15 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasMaxLength(20)
             .IsRequired();
 
-        builder.Property(e => e.OrderedAt)
+        builder.Property(e => e.OrderDate)
             .IsRequired();
 
         builder.Property(e => e.UpdatedAt)
             .IsRequired();
 
-        builder.Property(e => e.ShippedAt);
+        builder.Property(e => e.ShippingDate);
+
+        builder.Ignore(e => e.ProcessingDuration);
 
         builder.Property(e => e.TotalAmount)
             .HasPrecision(18, 2)
@@ -87,7 +89,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(e => e.PublicId)
             .IsUnique();
 
-        builder.HasIndex(e => new { e.OrderedAt, e.Id })
+        builder.HasIndex(e => new { e.OrderDate, e.Id })
             .IsDescending();
 
         builder.HasMany(e => e.Items)
@@ -101,8 +103,8 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
                 "CK_Orders_TotalAmount_NonNegative",
                 "[TotalAmount] >= 0");
             tableBuilder.HasCheckConstraint(
-                "CK_Orders_ShippedAt",
-                "[ShippedAt] IS NULL OR [ShippedAt] >= [OrderedAt]");
+                "CK_Orders_ShippingDate",
+                "[ShippingDate] IS NULL OR [ShippingDate] >= [OrderDate]");
         });
     }
 }

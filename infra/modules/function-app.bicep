@@ -16,7 +16,7 @@ param storageAccountName string
 @secure()
 param storageConnectionString string
 
-param updateOrderStatusQueueName string
+param orderUpdateQueueName string
 
 @minLength(3)
 param workloadName string
@@ -114,8 +114,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: createOrderQueueName
         }
         {
-          name: 'Queues__UpdateOrderStatusQueueName'
-          value: updateOrderStatusQueueName
+          name: 'Queues__OrderUpdateQueueName'
+          value: orderUpdateQueueName
         }
       ]
       ftpsState: 'Disabled'

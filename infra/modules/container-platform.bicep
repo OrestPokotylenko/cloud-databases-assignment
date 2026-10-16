@@ -10,7 +10,7 @@ param location string
 param queueStorageConnectionString string
 
 param resourceSuffix string
-param updateOrderStatusQueueName string
+param orderUpdateQueueName string
 
 @minLength(3)
 param workloadName string
@@ -126,8 +126,8 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: createOrderQueueName
             }
             {
-              name: 'Queues__UpdateOrderStatusQueueName'
-              value: updateOrderStatusQueueName
+              name: 'Queues__OrderUpdateQueueName'
+              value: orderUpdateQueueName
             }
           ]
           resources: {

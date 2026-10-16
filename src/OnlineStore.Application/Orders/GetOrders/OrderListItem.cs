@@ -4,7 +4,7 @@ namespace OnlineStore.Application.Orders.GetOrders;
 
 public record OrderListItem(
     Guid PublicId,
-    DateTimeOffset OrderedAt,
+    DateTimeOffset OrderDate,
     OrderStatus Status,
     string CustomerFullName,
     decimal TotalAmount);

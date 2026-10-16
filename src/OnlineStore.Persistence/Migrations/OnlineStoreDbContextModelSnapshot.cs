@@ -33,7 +33,7 @@ namespace OnlineStore.Persistence.Migrations
                     b.Property<Guid>("CustomerPublicId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTimeOffset>("OrderedAt")
+                    b.Property<DateTimeOffset>("OrderDate")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<Guid>("PublicId")
@@ -43,7 +43,7 @@ namespace OnlineStore.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<DateTimeOffset?>("ShippedAt")
+                    b.Property<DateTimeOffset?>("ShippingDate")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Status")
@@ -63,12 +63,12 @@ namespace OnlineStore.Persistence.Migrations
                     b.HasIndex("PublicId")
                         .IsUnique();
 
-                    b.HasIndex("OrderedAt", "Id")
+                    b.HasIndex("OrderDate", "Id")
                         .IsDescending();
 
                     b.ToTable("Orders", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Orders_ShippedAt", "[ShippedAt] IS NULL OR [ShippedAt] >= [OrderedAt]");
+                            t.HasCheckConstraint("CK_Orders_ShippingDate", "[ShippingDate] IS NULL OR [ShippingDate] >= [OrderDate]");
 
                             t.HasCheckConstraint("CK_Orders_TotalAmount_NonNegative", "[TotalAmount] >= 0");
                         });

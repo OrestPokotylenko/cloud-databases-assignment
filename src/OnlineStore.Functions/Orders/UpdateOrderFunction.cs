@@ -5,15 +5,15 @@ using OnlineStore.Functions.Messaging;
 
 namespace OnlineStore.Functions.Orders;
 
-public class UpdateOrderStatusFunction(
+public class UpdateOrderFunction(
     QueueCommandProcessor processor)
 {
-    [Function(nameof(UpdateOrderStatusFunction))]
+    [Function(nameof(UpdateOrderFunction))]
     public Task RunAsync(
         [QueueTrigger(
-            "%Queues:UpdateOrderStatusQueueName%",
+            "%Queues:OrderUpdateQueueName%",
             Connection = "Queues:ConnectionString")]
         string message,
         CancellationToken ct) =>
-        processor.ProcessAsync<UpdateOrderStatusMessage>(message, ct);
+        processor.ProcessAsync<OrderActionMessage>(message, ct);
 }

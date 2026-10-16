@@ -28,12 +28,10 @@ public class GetOrderByIdHandler(
         order.City,
         order.CountryCode,
         order.Status,
-        order.OrderedAt,
+        order.OrderDate,
         order.UpdatedAt,
-        order.ShippedAt,
-        order.ShippedAt is null
-            ? null
-            : (order.ShippedAt.Value - order.OrderedAt).TotalSeconds,
+        order.ShippingDate,
+        order.ProcessingDuration?.TotalSeconds,
         order.TotalAmount,
         order.RejectionReason,
         order.Items.Select(item => new OrderItemResult(

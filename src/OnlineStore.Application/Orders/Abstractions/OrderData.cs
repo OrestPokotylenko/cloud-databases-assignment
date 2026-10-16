@@ -15,9 +15,10 @@ public record OrderData(
     string City,
     string CountryCode,
     OrderStatus Status,
-    DateTimeOffset OrderedAt,
+    DateTimeOffset OrderDate,
     DateTimeOffset UpdatedAt,
-    DateTimeOffset? ShippedAt,
+    DateTimeOffset? ShippingDate,
+    TimeSpan? ProcessingDuration,
     decimal TotalAmount,
     string? RejectionReason,
     IReadOnlyList<OrderItemData> Items);

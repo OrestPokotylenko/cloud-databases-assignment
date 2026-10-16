@@ -8,7 +8,7 @@ public interface IOrderCommandRepository
         CreateOrderMessage message,
         CancellationToken ct);
 
-    Task UpdateStatusAsync(
-        UpdateOrderStatusMessage message,
+    Task ApplyActionAsync(
+        OrderActionMessage message,
         CancellationToken ct);
 }
