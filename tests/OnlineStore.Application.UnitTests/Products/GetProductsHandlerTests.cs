@@ -1,5 +1,6 @@
 using OnlineStore.Application.Products.Abstractions;
 using OnlineStore.Application.Products.GetProducts;
+using OnlineStore.Application.Products.Images;
 
 using Xunit;
 
@@ -11,14 +12,30 @@ public class GetProductsHandlerTests
     public async Task HandleAsync_ValidPage_ReturnsMappedPage()
     {
         var productId = Guid.NewGuid();
+        var imageId = Guid.NewGuid();
         var createdAt = DateTimeOffset.UtcNow;
         var repository = new ProductQueryRepositoryStub
         {
             Page = new ProductPageData(
-                [new ProductData(productId, createdAt, "Widget", null, 9.99m, 4)],
+                [new ProductData(
+                    productId,
+                    createdAt,
+                    "Widget",
+                    null,
+                    9.99m,
+                    4,
+                    [new ProductImageData(
+                        imageId,
+                        $"{productId}/{imageId}",
+                        "image/jpeg",
+                        13248,
+                        true,
+                        0)])],
                 21)
         };
-        var handler = new GetProductsHandler(repository);
+        var handler = new GetProductsHandler(
+            repository,
+            new ProductImageStorageStub());
 
         var result = await handler.HandleAsync(
             new GetProductsQuery(2, 10),
@@ -27,6 +44,9 @@ public class GetProductsHandlerTests
         var product = Assert.Single(result.Products);
         Assert.Equal(productId, product.PublicId);
         Assert.Equal(createdAt, product.CreatedAt);
+        Assert.Equal(
+            $"https://storage.example/product-images/{productId}/{imageId}",
+            product.PrimaryImageUrl);
         Assert.Equal(2, result.PageNumber);
         Assert.Equal(10, result.PageSize);
         Assert.Equal(21, result.TotalCount);
@@ -45,7 +65,9 @@ public class GetProductsHandlerTests
         int pageSize)
     {
         var repository = new ProductQueryRepositoryStub();
-        var handler = new GetProductsHandler(repository);
+        var handler = new GetProductsHandler(
+            repository,
+            new ProductImageStorageStub());
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             handler.HandleAsync(

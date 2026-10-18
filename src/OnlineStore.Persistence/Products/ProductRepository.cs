@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using OnlineStore.Application.Products.Abstractions;
+using OnlineStore.Application.Products.Images;
 using OnlineStore.Domain.Products.Entities;
 
 namespace OnlineStore.Persistence.Products;
@@ -32,7 +33,18 @@ public class ProductRepository(
                 product.Name,
                 product.Description,
                 product.Price,
-                product.StockQuantity))
+                product.StockQuantity,
+                product.Images
+                    .OrderBy(image => image.SortOrder)
+                    .ThenBy(image => image.Id)
+                    .Select(image => new ProductImageData(
+                        image.PublicId,
+                        image.BlobName,
+                        image.ContentType,
+                        image.SizeBytes,
+                        image.IsPrimary,
+                        image.SortOrder))
+                    .ToList()))
             .SingleOrDefaultAsync(ct);
     }
 
@@ -54,7 +66,18 @@ public class ProductRepository(
                 product.Name,
                 product.Description,
                 product.Price,
-                product.StockQuantity))
+                product.StockQuantity,
+                product.Images
+                    .OrderBy(image => image.SortOrder)
+                    .ThenBy(image => image.Id)
+                    .Select(image => new ProductImageData(
+                        image.PublicId,
+                        image.BlobName,
+                        image.ContentType,
+                        image.SizeBytes,
+                        image.IsPrimary,
+                        image.SortOrder))
+                    .ToList()))
             .ToListAsync(ct);
 
         return new ProductPageData(products, totalCount);

@@ -6,7 +6,6 @@ using OnlineStore.Application.Products.CreateProduct;
 using OnlineStore.Application.Products.DeleteProduct;
 using OnlineStore.Application.Products.DeleteProductImage;
 using OnlineStore.Application.Products.GetProductById;
-using OnlineStore.Application.Products.GetProductImages;
 using OnlineStore.Application.Products.GetProducts;
 using OnlineStore.Application.Products.RequestProductImageUpload;
 using OnlineStore.Application.Products.SetPrimaryProductImage;
@@ -26,7 +25,6 @@ internal static class ProductServiceCollectionExtensions
         services.AddScoped<IHandler<GetProductsQuery, GetProductsResult>, GetProductsHandler>();
         services.AddScoped<IHandler<RequestProductImageUploadCommand, RequestProductImageUploadResult>, RequestProductImageUploadHandler>();
         services.AddScoped<IHandler<ConfirmProductImageUploadCommand, ConfirmProductImageUploadResult>, ConfirmProductImageUploadHandler>();
-        services.AddScoped<IHandler<GetProductImagesQuery, GetProductImagesResult>, GetProductImagesHandler>();
         services.AddScoped<IHandler<DeleteProductImageCommand, DeleteProductImageResult>, DeleteProductImageHandler>();
         services.AddScoped<IHandler<SetPrimaryProductImageCommand, SetPrimaryProductImageResult>, SetPrimaryProductImageHandler>();
 

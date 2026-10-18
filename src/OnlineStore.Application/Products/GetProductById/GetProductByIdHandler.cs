@@ -1,10 +1,12 @@
 using OnlineStore.Application.Abstractions.CQRS;
 using OnlineStore.Application.Products.Abstractions;
+using OnlineStore.Application.Products.Images;
 
 namespace OnlineStore.Application.Products.GetProductById;
 
 public class GetProductByIdHandler(
-    IProductQueryRepository productRepository)
+    IProductQueryRepository productRepository,
+    IProductImageStorage imageStorage)
     : IHandler<GetProductByIdQuery, GetProductByIdResult?>
 {
     public async Task<GetProductByIdResult?> HandleAsync(
@@ -25,6 +27,11 @@ public class GetProductByIdHandler(
                 product.Name,
                 product.Description,
                 product.Price,
-                product.StockQuantity);
+                product.StockQuantity,
+                product.Images
+                    .Select(image => ProductImageResultMapper.Map(
+                        image,
+                        imageStorage))
+                    .ToArray());
     }
 }

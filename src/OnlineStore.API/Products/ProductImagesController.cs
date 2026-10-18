@@ -6,7 +6,6 @@ using OnlineStore.API.ExceptionHandling;
 using OnlineStore.Application.Abstractions.CQRS;
 using OnlineStore.Application.Products.ConfirmProductImageUpload;
 using OnlineStore.Application.Products.DeleteProductImage;
-using OnlineStore.Application.Products.GetProductImages;
 using OnlineStore.Application.Products.Images;
 using OnlineStore.Application.Products.RequestProductImageUpload;
 using OnlineStore.Application.Products.SetPrimaryProductImage;
@@ -71,24 +70,7 @@ public class ProductImagesController(
             return NotFound();
         }
 
-        return CreatedAtAction(
-            nameof(GetAll),
-            new { version = "1", productPublicId },
-            result.Image);
-    }
-
-    [HttpGet]
-    [ProducesResponseType<IReadOnlyList<ProductImageResult>>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<IReadOnlyList<ProductImageResult>>> GetAll(
-        Guid productPublicId,
-        CancellationToken ct)
-    {
-        var result = await sender.SendAsync(
-            new GetProductImagesQuery(productPublicId),
-            ct);
-
-        return result.ProductExists ? Ok(result.Images) : NotFound();
+        return StatusCode(StatusCodes.Status201Created, result.Image);
     }
 
     [HttpDelete("{imagePublicId:guid}")]

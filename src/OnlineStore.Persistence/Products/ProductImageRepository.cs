@@ -33,33 +33,6 @@ public class ProductImageRepository(
         return image is null ? null : Map(image);
     }
 
-    public async Task<ProductImageCollectionData> GetAllAsync(
-        Guid productPublicId,
-        CancellationToken ct)
-    {
-        var productId = await context.Products
-            .AsNoTracking()
-            .Where(product => product.PublicId == productPublicId)
-            .Select(product => (int?)product.Id)
-            .SingleOrDefaultAsync(ct);
-
-        if (productId is null)
-        {
-            return new ProductImageCollectionData(false, []);
-        }
-
-        var images = await context.ProductImages
-            .AsNoTracking()
-            .Where(image => image.ProductId == productId)
-            .OrderBy(image => image.SortOrder)
-            .ThenBy(image => image.Id)
-            .ToListAsync(ct);
-
-        return new ProductImageCollectionData(
-            true,
-            images.Select(Map).ToList());
-    }
-
     public async Task<ProductImageData?> AddAsync(
         Guid productPublicId,
         Guid imagePublicId,

@@ -6,4 +6,5 @@ public record ProductListItem(
     string Name,
     string? Description,
     decimal Price,
-    int StockQuantity);
+    int StockQuantity,
+    string? PrimaryImageUrl);

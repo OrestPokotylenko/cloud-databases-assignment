@@ -35,17 +35,6 @@ internal class ProductImageRepositoryStub
         return Task.FromResult(Image);
     }
 
-    public Task<ProductImageCollectionData> GetAllAsync(
-        Guid productPublicId,
-        CancellationToken ct)
-    {
-        RequestedProductPublicId = productPublicId;
-        ReceivedCancellationToken = ct;
-        return Task.FromResult(new ProductImageCollectionData(
-            ProductExists,
-            Images));
-    }
-
     public Task<ProductImageData?> AddAsync(
         Guid productPublicId,
         Guid imagePublicId,
