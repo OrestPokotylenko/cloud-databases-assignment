@@ -1,10 +1,12 @@
 using OnlineStore.Application.Abstractions.CQRS;
 using OnlineStore.Application.Products.Abstractions;
+using OnlineStore.Application.Products.Images;
 
 namespace OnlineStore.Application.Products.GetProducts;
 
 public class GetProductsHandler(
-    IProductQueryRepository productRepository)
+    IProductQueryRepository productRepository,
+    IProductImageStorage imageStorage)
     : IHandler<GetProductsQuery, GetProductsResult>
 {
     public async Task<GetProductsResult> HandleAsync(
@@ -38,13 +40,22 @@ public class GetProductsHandler(
             request.PageSize,
             ct);
         var products = productPage.Products
-            .Select(product => new ProductListItem(
-                product.PublicId,
-                product.CreatedAt,
-                product.Name,
-                product.Description,
-                product.Price,
-                product.StockQuantity))
+            .Select(product =>
+            {
+                var primaryImage = product.Images.SingleOrDefault(
+                    image => image.IsPrimary);
+
+                return new ProductListItem(
+                    product.PublicId,
+                    product.CreatedAt,
+                    product.Name,
+                    product.Description,
+                    product.Price,
+                    product.StockQuantity,
+                    primaryImage is null
+                        ? null
+                        : imageStorage.GetPublicUrl(primaryImage.BlobName));
+            })
             .ToArray();
         var totalPages = productPage.TotalCount == 0
             ? 0

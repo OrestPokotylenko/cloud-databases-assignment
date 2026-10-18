@@ -10,8 +10,4 @@ public interface IProductImageQueryRepository
         Guid productPublicId,
         Guid imagePublicId,
         CancellationToken ct);
-
-    Task<ProductImageCollectionData> GetAllAsync(
-        Guid productPublicId,
-        CancellationToken ct);
 }
