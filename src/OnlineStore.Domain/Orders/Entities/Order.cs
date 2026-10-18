@@ -1,15 +1,17 @@
+using OnlineStore.Domain.Customers.Entities;
+
 namespace OnlineStore.Domain.Orders.Entities;
 
 public class Order
 {
     private readonly List<OrderItem> items = [];
-    private CustomerDetails? customer;
+    private Customer? customer;
     private DeliveryAddress? deliveryAddress;
 
     public int Id { get; private set; }
     public Guid PublicId { get; private set; }
-    public Guid CustomerPublicId { get; private set; }
-    public CustomerDetails Customer
+    public int CustomerId { get; private set; }
+    public Customer Customer
     {
         get => customer ?? throw new InvalidOperationException("The customer has not been initialized.");
         private set => customer = value;
@@ -33,13 +35,12 @@ public class Order
 
     public Order(
         Guid publicId,
-        Guid customerPublicId,
-        CustomerDetails customer,
+        Customer customer,
         DeliveryAddress deliveryAddress,
         DateTimeOffset orderDate,
         IEnumerable<OrderItem> orderItems)
     {
-        ValidateIdentity(publicId, customerPublicId);
+        ArgumentOutOfRangeException.ThrowIfEqual(publicId, Guid.Empty);
         ArgumentNullException.ThrowIfNull(customer);
         ArgumentNullException.ThrowIfNull(deliveryAddress);
         ArgumentNullException.ThrowIfNull(orderItems);
@@ -51,7 +52,6 @@ public class Order
         }
 
         PublicId = publicId;
-        CustomerPublicId = customerPublicId;
         Customer = customer;
         DeliveryAddress = deliveryAddress;
         OrderDate = orderDate;
@@ -63,13 +63,12 @@ public class Order
 
     public static Order Rejected(
         Guid publicId,
-        Guid customerPublicId,
-        CustomerDetails customer,
+        Customer customer,
         DeliveryAddress deliveryAddress,
         DateTimeOffset orderDate,
         string reason)
     {
-        ValidateIdentity(publicId, customerPublicId);
+        ArgumentOutOfRangeException.ThrowIfEqual(publicId, Guid.Empty);
         ArgumentNullException.ThrowIfNull(customer);
         ArgumentNullException.ThrowIfNull(deliveryAddress);
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
@@ -77,7 +76,6 @@ public class Order
         return new Order
         {
             PublicId = publicId,
-            CustomerPublicId = customerPublicId,
             Customer = customer,
             DeliveryAddress = deliveryAddress,
             OrderDate = orderDate,
@@ -133,18 +131,4 @@ public class Order
         }
     }
 
-    private static void ValidateIdentity(
-        Guid publicId,
-        Guid customerPublicId)
-    {
-        if (publicId == Guid.Empty)
-        {
-            throw new ArgumentOutOfRangeException(nameof(publicId));
-        }
-
-        if (customerPublicId == Guid.Empty)
-        {
-            throw new ArgumentOutOfRangeException(nameof(customerPublicId));
-        }
-    }
 }

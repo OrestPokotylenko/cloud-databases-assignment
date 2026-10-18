@@ -1,5 +1,29 @@
 @OnlineStore.API_HostAddress = http://localhost:5053
 
+### Create a customer
+POST {{OnlineStore.API_HostAddress}}/api/v1/customers
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "email": "john@example.com"
+}
+
+### Get or update a customer by public ID
+@CustomerId = 00000000-0000-0000-0000-000000000000
+
+GET {{OnlineStore.API_HostAddress}}/api/v1/customers/{{CustomerId}}
+Accept: application/json
+
+###
+PATCH {{OnlineStore.API_HostAddress}}/api/v1/customers/{{CustomerId}}
+Content-Type: application/json
+
+{
+  "email": "john.smith@example.com"
+}
+
 ### Create a product
 POST {{OnlineStore.API_HostAddress}}/api/v1/products
 Content-Type: application/json
@@ -91,12 +115,7 @@ POST {{OnlineStore.API_HostAddress}}/api/v1/orders
 Content-Type: application/json
 
 {
-  "customerPublicId": "00000000-0000-0000-0000-000000000001",
-  "customer": {
-    "fullName": "Alex Example",
-    "email": "alex@example.com",
-    "phoneNumber": "+31612345678"
-  },
+  "customerPublicId": "{{CustomerId}}",
   "deliveryAddress": {
     "street": "Example Street",
     "houseNumber": "10",

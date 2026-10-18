@@ -12,6 +12,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IRequestSender, RequestSender>();
         services.AddSingleton(TimeProvider.System);
 
+        services.AddCustomerServices();
         services.AddOrderServices();
         services.AddProductServices();
         services.AddProductReviewServices();

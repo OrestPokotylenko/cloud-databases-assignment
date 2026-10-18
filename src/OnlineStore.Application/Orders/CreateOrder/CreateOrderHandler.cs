@@ -1,5 +1,6 @@
 using OnlineStore.Application.Abstractions.CQRS;
 using OnlineStore.Application.Abstractions.Messaging;
+using OnlineStore.Application.Customers.Abstractions;
 using OnlineStore.Application.Orders.Messages;
 using OnlineStore.Domain.Orders;
 
@@ -7,14 +8,14 @@ namespace OnlineStore.Application.Orders.CreateOrder;
 
 public class CreateOrderHandler(
     IMessagePublisher<CreateOrderMessage> publisher,
+    ICustomerQueryRepository customerRepository,
     TimeProvider timeProvider)
-    : IHandler<CreateOrderCommand, CreateOrderResult>
+    : IHandler<CreateOrderCommand, CreateOrderResult?>
 {
-    public async Task<CreateOrderResult> HandleAsync(
+    public async Task<CreateOrderResult?> HandleAsync(
         CreateOrderCommand request,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(request.Customer);
         ArgumentNullException.ThrowIfNull(request.DeliveryAddress);
         ArgumentNullException.ThrowIfNull(request.Items);
 
@@ -23,10 +24,6 @@ public class CreateOrderHandler(
             throw new ArgumentOutOfRangeException(nameof(request.CustomerPublicId));
         }
 
-        _ = new CustomerDetails(
-            request.Customer.FullName,
-            request.Customer.Email,
-            request.Customer.PhoneNumber);
         _ = new DeliveryAddress(
             request.DeliveryAddress.Street,
             request.DeliveryAddress.HouseNumber,
@@ -46,6 +43,13 @@ public class CreateOrderHandler(
             throw new ArgumentException("Every order item must contain a product and a positive quantity.");
         }
 
+        if (await customerRepository.GetByPublicIdAsync(
+                request.CustomerPublicId,
+                ct) is null)
+        {
+            return null;
+        }
+
         var items = request.Items
             .GroupBy(item => item.ProductPublicId)
             .Select(group => new OrderItemMessage(
@@ -60,7 +64,6 @@ public class CreateOrderHandler(
             timeProvider.GetUtcNow(),
             publicId,
             request.CustomerPublicId,
-            request.Customer,
             request.DeliveryAddress,
             items);
 

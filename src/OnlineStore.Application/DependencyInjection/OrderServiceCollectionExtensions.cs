@@ -20,7 +20,7 @@ internal static class OrderServiceCollectionExtensions
     public static IServiceCollection AddOrderServices(
         this IServiceCollection services)
     {
-        services.AddScoped<IHandler<CreateOrderCommand, CreateOrderResult>, CreateOrderHandler>();
+        services.AddScoped<IHandler<CreateOrderCommand, CreateOrderResult?>, CreateOrderHandler>();
         services.AddScoped<IHandler<ProcessOrderCommand, OrderActionResult>, OrderActionHandler>();
         services.AddScoped<IHandler<ShipOrderCommand, OrderActionResult>, OrderActionHandler>();
         services.AddScoped<IHandler<CancelOrderCommand, OrderActionResult>, OrderActionHandler>();

@@ -8,7 +8,6 @@ public record CreateOrderMessage(
     DateTimeOffset SubmittedAt,
     Guid OrderPublicId,
     Guid CustomerPublicId,
-    OrderCustomerMessage Customer,
     DeliveryAddressMessage DeliveryAddress,
     IReadOnlyList<OrderItemMessage> Items)
     : IQueuedCommand;

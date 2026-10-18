@@ -27,6 +27,7 @@ public static class PersistenceServiceCollectionExtensions
             options.UseSqlServer(database.ConnectionString);
         });
 
+        services.AddCustomerPersistence();
         services.AddOrderPersistence();
         services.AddProductPersistence();
 
