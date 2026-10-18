@@ -11,6 +11,7 @@ public class OnlineStoreDbContext(
     : DbContext(options)
 {
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();

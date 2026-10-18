@@ -14,12 +14,14 @@ param workloadName string
 
 var createOrderQueueName = 'order-create'
 var orderUpdateQueueName = 'order-update'
+var productImageContainerName = 'product-images'
 
 module storage './modules/storage.bicep' = {
   name: 'storage'
   params: {
     environmentName: environmentName
     location: location
+    productImageContainerName: productImageContainerName
     queueNames: [
       createOrderQueueName
       orderUpdateQueueName
@@ -55,7 +57,8 @@ module containerPlatform './modules/container-platform.bicep' = {
     databaseServerFullyQualifiedDomainName: sql.outputs.serverFullyQualifiedDomainName
     environmentName: environmentName
     location: location
-    queueStorageConnectionString: storageConnectionString
+    productImageContainerName: productImageContainerName
+    storageConnectionString: storageConnectionString
     resourceSuffix: resourceSuffix
     orderUpdateQueueName: orderUpdateQueueName
     workloadName: workloadName

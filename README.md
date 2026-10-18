@@ -13,9 +13,20 @@ injection.
 - `POST /api/v1/products`
 - `PUT /api/v1/products/{publicId}`
 - `DELETE /api/v1/products/{publicId}`
+- `POST /api/v1/products/{publicId}/images/upload`
+- `POST /api/v1/products/{publicId}/images/{imagePublicId}/confirm`
+- `GET /api/v1/products/{publicId}/images`
+- `DELETE /api/v1/products/{publicId}/images/{imagePublicId}`
+- `POST /api/v1/products/{publicId}/images/{imagePublicId}/primary`
 
 Page sizes are limited to 100 records. API consumers use the product's
 `publicId`; the SQL identity key remains an implementation detail.
+
+Product image metadata is stored in SQL Server while the image bytes are stored
+in the public-read `product-images` Blob container. Uploads do not pass through
+the API. The API returns a short-lived, write-only SAS URL for one blob; the
+client uploads to that URL and then confirms the upload with the API. Public
+image URLs returned by the API point directly to Blob Storage.
 
 ## Order endpoints
 
@@ -53,12 +64,17 @@ dotnet user-secrets set "Database:ConnectionString" `
 dotnet user-secrets set "Queues:ConnectionString" `
   "UseDevelopmentStorage=true" `
   --project src/OnlineStore.API
+
+dotnet user-secrets set "ProductImages:ConnectionString" `
+  "UseDevelopmentStorage=true" `
+  --project src/OnlineStore.API
 ```
 
 User Secrets are stored outside the repository and must not be committed. In a
 deployed API environment, provide the settings through the platform's secure
 configuration using `Database__ConnectionString` and
-`Queues__ConnectionString`. Queue names are non-secret options in
+`Queues__ConnectionString`. The image feature uses
+`ProductImages__ConnectionString`. Queue names are non-secret options in
 `appsettings.json`; override them with `Queues__CreateOrderQueueName` and
 `Queues__OrderUpdateQueueName` when needed. The local Functions host also needs
 `AzureWebJobsStorage` and `FUNCTIONS_WORKER_RUNTIME`; the deployed Flex
@@ -95,10 +111,6 @@ dotnet run --project tests/OnlineStore.Application.UnitTests
 
 Example requests are in `src/OnlineStore.API/OnlineStore.API.http`.
 
-Product specifications are stored in SQL Server. Product image binaries are
-deliberately outside this slice; they should be implemented as a separate blob
-storage feature with only their metadata/reference associated with a product.
-
 ## Continuous integration
 
 Pull requests targeting `develop` or `main` run the modular validation workflow
@@ -122,8 +134,8 @@ The subscription-scoped entry point is `infra/main.bicep`. Its modules deploy:
 - an Azure Container Registry used for the API image;
 - one Flex Consumption Function App containing `CreateOrderFunction` and
   `UpdateOrderFunction`;
-- an LRS StorageV2 account with the two order queues and Functions deployment
-  container;
+- an LRS StorageV2 account with the two order queues, Functions deployment
+  container, and public-read `product-images` Blob container;
 - an Azure SQL logical server and serverless General Purpose database;
 - Microsoft Entra-only SQL authentication;
 - managed identities and least-scope pull, deployment, and database permissions;

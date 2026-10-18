@@ -163,6 +163,59 @@ namespace OnlineStore.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("OnlineStore.Domain.Products.Entities.ProductImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BlobName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("PublicId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlobName")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId")
+                        .IsUnique()
+                        .HasFilter("[IsPrimary] = 1");
+
+                    b.HasIndex("PublicId")
+                        .IsUnique();
+
+                    b.ToTable("ProductImages", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProductImages_SizeBytes_Positive", "[SizeBytes] > 0");
+
+                            t.HasCheckConstraint("CK_ProductImages_SortOrder_NonNegative", "[SortOrder] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("OnlineStore.Persistence.Messaging.ProcessedMessage", b =>
                 {
                     b.Property<int>("Id")
@@ -287,9 +340,23 @@ namespace OnlineStore.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("OnlineStore.Domain.Products.Entities.ProductImage", b =>
+                {
+                    b.HasOne("OnlineStore.Domain.Products.Entities.Product", null)
+                        .WithMany("Images")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OnlineStore.Domain.Orders.Entities.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("OnlineStore.Domain.Products.Entities.Product", b =>
+                {
+                    b.Navigation("Images");
                 });
 #pragma warning restore 612, 618
         }

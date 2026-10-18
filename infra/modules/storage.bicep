@@ -1,5 +1,6 @@
 param environmentName string
 param location string
+param productImageContainerName string
 param queueNames array
 param resourceSuffix string
 
@@ -18,7 +19,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   kind: 'StorageV2'
   properties: {
     accessTier: 'Hot'
-    allowBlobPublicAccess: false
+    allowBlobPublicAccess: true
     allowSharedKeyAccess: true
     minimumTlsVersion: 'TLS1_2'
     publicNetworkAccess: 'Enabled'
@@ -29,6 +30,30 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
   parent: storageAccount
   name: 'default'
+  properties: {
+    cors: {
+      corsRules: [
+        {
+          allowedHeaders: [
+            '*'
+          ]
+          allowedMethods: [
+            'GET'
+            'HEAD'
+            'OPTIONS'
+            'PUT'
+          ]
+          allowedOrigins: [
+            '*'
+          ]
+          exposedHeaders: [
+            'ETag'
+          ]
+          maxAgeInSeconds: 3600
+        }
+      ]
+    }
+  }
 }
 
 resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
@@ -36,6 +61,14 @@ resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/con
   name: 'function-releases'
   properties: {
     publicAccess: 'None'
+  }
+}
+
+resource productImageContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: productImageContainerName
+  properties: {
+    publicAccess: 'Blob'
   }
 }
 
