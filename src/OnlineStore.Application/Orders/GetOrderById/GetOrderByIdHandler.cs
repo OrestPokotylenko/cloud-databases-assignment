@@ -20,7 +20,6 @@ public class GetOrderByIdHandler(
         order.CustomerPublicId,
         order.CustomerFullName,
         order.CustomerEmail,
-        order.CustomerPhoneNumber,
         order.Street,
         order.HouseNumber,
         order.AddressAddition,

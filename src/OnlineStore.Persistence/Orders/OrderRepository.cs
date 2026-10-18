@@ -53,10 +53,9 @@ public class OrderRepository(
             products.All(product =>
                 product.StockQuantity >= requestedQuantities[product.PublicId]);
 
-        var customer = new CustomerDetails(
-            message.Customer.FullName,
-            message.Customer.Email,
-            message.Customer.PhoneNumber);
+        var customer = await context.Customers.SingleOrDefaultAsync(
+            customer => customer.PublicId == message.CustomerPublicId,
+            ct) ?? throw new InvalidOperationException("The customer does not exist.");
         var address = new DeliveryAddress(
             message.DeliveryAddress.Street,
             message.DeliveryAddress.HouseNumber,
@@ -81,7 +80,6 @@ public class OrderRepository(
 
             order = new Order(
                 message.OrderPublicId,
-                message.CustomerPublicId,
                 customer,
                 address,
                 message.SubmittedAt,
@@ -91,7 +89,6 @@ public class OrderRepository(
         {
             order = Order.Rejected(
                 message.OrderPublicId,
-                message.CustomerPublicId,
                 customer,
                 address,
                 message.SubmittedAt,
@@ -212,6 +209,7 @@ public class OrderRepository(
 
     private IQueryable<Order> BaseQuery() => context.Orders
         .AsNoTracking()
+        .Include(order => order.Customer)
         .Include(order => order.Items)
         .AsSplitQuery();
 
@@ -235,10 +233,9 @@ public class OrderRepository(
 
     private static OrderData Map(Order order) => new(
         order.PublicId,
-        order.CustomerPublicId,
-        order.Customer.FullName,
+        order.Customer.PublicId,
+        $"{order.Customer.FirstName} {order.Customer.LastName}",
         order.Customer.Email,
-        order.Customer.PhoneNumber,
         order.DeliveryAddress.Street,
         order.DeliveryAddress.HouseNumber,
         order.DeliveryAddress.Addition,

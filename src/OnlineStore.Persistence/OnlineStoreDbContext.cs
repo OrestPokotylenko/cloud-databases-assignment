@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using OnlineStore.Domain.Customers.Entities;
 using OnlineStore.Domain.Products.Entities;
 using OnlineStore.Domain.Orders.Entities;
 using OnlineStore.Persistence.Messaging;
@@ -10,6 +11,7 @@ public class OnlineStoreDbContext(
     DbContextOptions<OnlineStoreDbContext> options)
     : DbContext(options)
 {
+    public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<Order> Orders => Set<Order>();

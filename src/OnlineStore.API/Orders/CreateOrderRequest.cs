@@ -7,9 +7,6 @@ public class CreateOrderRequest
     public Guid CustomerPublicId { get; init; }
 
     [Required]
-    public required OrderCustomerRequest Customer { get; init; }
-
-    [Required]
     public required DeliveryAddressRequest DeliveryAddress { get; init; }
 
     [Required]

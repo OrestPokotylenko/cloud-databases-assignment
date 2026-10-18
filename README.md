@@ -1,10 +1,28 @@
 # Online Store cloud databases assignment
 
-The product and order features are an ASP.NET Core Web API backed by SQL Server
-through Entity Framework Core. They follow the solution's Domain, Application,
-Persistence, and API layers. Commands and queries are handled separately and
-are dispatched by the application request sender registered through dependency
-injection.
+The customer, product, review, and order features are exposed through an ASP.NET
+Core Web API. Relational data uses SQL Server through Entity Framework Core,
+while reviews use Azure Table Storage. The features follow the solution's
+Domain, Application, Persistence, ExternalServices, and API layers. Commands
+and queries are handled separately and dispatched by the application request
+sender registered through dependency injection.
+
+## Customer endpoints
+
+- `POST /api/v1/customers`
+- `GET /api/v1/customers/{publicId}`
+- `PATCH /api/v1/customers/{publicId}`
+
+Customers are stored in SQL Server with unique public IDs and normalized,
+unique email addresses. Authentication, passwords, roles, payment methods, and
+saved addresses are intentionally outside this POC. Orders receive a customer
+public ID through the API, resolve it to the internal SQL customer ID, and store
+that ID as their foreign key. The delivery address remains an order snapshot
+because it describes the destination for that specific order.
+
+Customer information is currently available through this API only. A production
+integration with another department could use a dedicated API, events/messages,
+or an integration service without granting direct access to this database.
 
 ## Product endpoints
 
@@ -51,7 +69,9 @@ data should be exported through a separate analytical pipeline or store.
 Order creation and explicit order actions return `202 Accepted`. They are published to
 Azure Storage Queues and processed by `CreateOrderFunction` and
 `UpdateOrderFunction`. Creation verifies and decrements product stock in
-the same SQL transaction as the order insert. Cancelling an unshipped order
+the same SQL transaction as the order insert. A customer must exist before the
+create command is queued, and the Function stores the customer's internal SQL
+ID on the order. Cancelling an unshipped order
 restores its stock atomically. The domain entity permits only pending orders to
 be processed, processing orders to be shipped, and pending or processing orders
 to be cancelled. Shipped and cancelled orders are terminal.

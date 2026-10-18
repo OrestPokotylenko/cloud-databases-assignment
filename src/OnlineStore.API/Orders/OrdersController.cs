@@ -54,6 +54,7 @@ public class OrdersController(
     [HttpPost]
     [ProducesResponseType<CreateOrderResult>(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<CreateOrderResult>> Create(
         CreateOrderRequest request,
         CancellationToken ct)
@@ -61,10 +62,6 @@ public class OrdersController(
         var result = await sender.SendAsync(
             new CreateOrderCommand(
                 request.CustomerPublicId,
-                new OrderCustomerMessage(
-                    request.Customer.FullName,
-                    request.Customer.Email,
-                    request.Customer.PhoneNumber),
                 new DeliveryAddressMessage(
                     request.DeliveryAddress.Street,
                     request.DeliveryAddress.HouseNumber,
@@ -77,10 +74,12 @@ public class OrdersController(
                     item.Quantity)).ToList()),
             ct);
 
-        return AcceptedAtAction(
-            nameof(GetById),
-            new { version = "1", publicId = result.PublicId },
-            result);
+        return result is null
+            ? NotFound()
+            : AcceptedAtAction(
+                nameof(GetById),
+                new { version = "1", publicId = result.PublicId },
+                result);
     }
 
     [HttpPost("{publicId:guid}/process")]

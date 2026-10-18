@@ -1,3 +1,5 @@
+using OnlineStore.Domain.Customers;
+using OnlineStore.Domain.Customers.Entities;
 using OnlineStore.Domain.Orders;
 using OnlineStore.Domain.Orders.Entities;
 
@@ -88,8 +90,7 @@ public class OrderTests
 
     private static Order CreateOrder(DateTimeOffset orderDate) => new(
         Guid.NewGuid(),
-        Guid.NewGuid(),
-        new CustomerDetails("Customer", "customer@example.com", null),
+        new Customer(new CustomerDetails("John", "Smith", "customer@example.com")),
         new DeliveryAddress("Street", "1", null, "1000 AA", "Amsterdam", "NL"),
         orderDate,
         [new OrderItem(Guid.NewGuid(), "Product", 10m, 2)]);

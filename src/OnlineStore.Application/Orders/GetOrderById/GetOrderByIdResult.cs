@@ -7,7 +7,6 @@ public record GetOrderByIdResult(
     Guid CustomerPublicId,
     string CustomerFullName,
     string CustomerEmail,
-    string? CustomerPhoneNumber,
     string Street,
     string HouseNumber,
     string? AddressAddition,

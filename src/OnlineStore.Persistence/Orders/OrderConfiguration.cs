@@ -18,7 +18,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .IsRequired()
             .ValueGeneratedNever();
 
-        builder.Property(e => e.CustomerPublicId)
+        builder.Property(e => e.CustomerId)
             .IsRequired();
 
         builder.Property(e => e.Status)
@@ -42,21 +42,6 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property(e => e.RejectionReason)
             .HasMaxLength(500);
-
-        builder.OwnsOne(e => e.Customer, customer =>
-        {
-            customer.Property(e => e.FullName)
-                .HasColumnName("CustomerFullName")
-                .HasMaxLength(200)
-                .IsRequired();
-            customer.Property(e => e.Email)
-                .HasColumnName("CustomerEmail")
-                .HasMaxLength(320)
-                .IsRequired();
-            customer.Property(e => e.PhoneNumber)
-                .HasColumnName("CustomerPhoneNumber")
-                .HasMaxLength(30);
-        });
 
         builder.OwnsOne(e => e.DeliveryAddress, address =>
         {
@@ -91,6 +76,11 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.HasIndex(e => new { e.OrderDate, e.Id })
             .IsDescending();
+
+        builder.HasOne(e => e.Customer)
+            .WithMany()
+            .HasForeignKey(e => e.CustomerId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(e => e.Items)
             .WithOne()
