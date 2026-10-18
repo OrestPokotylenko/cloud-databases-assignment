@@ -1,0 +1,121 @@
+name: Reusable validation
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  security-events: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build:
+    name: Build application and container
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Restore
+        run: dotnet restore OnlineStore.slnx
+
+      - name: Build
+        run: dotnet build OnlineStore.slnx --configuration Release --no-restore
+
+      - name: Build API container
+        run: >-
+          docker build
+          --file src/OnlineStore.API/Dockerfile
+          --tag online-store-api:validation
+          .
+
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Restore
+        run: dotnet restore OnlineStore.slnx
+
+      - name: Test
+        run: >-
+          dotnet run
+          --project tests/OnlineStore.Application.UnitTests/OnlineStore.Application.UnitTests.csproj
+          --configuration Release
+          --no-restore
+
+  security:
+    name: Security analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          build-mode: manual
+
+      - name: Audit NuGet dependencies
+        run: >-
+          dotnet restore OnlineStore.slnx
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -p:TreatWarningsAsErrors=true
+
+      - name: Build for CodeQL
+        run: dotnet build OnlineStore.slnx --configuration Release --no-restore
+
+      - name: Analyze with CodeQL
+        uses: github/codeql-action/analyze@v3
+
+  bicep:
+    name: Validate Bicep
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CLIENT_ID: 00000000-0000-0000-0000-000000000001
+      AZURE_SQL_ADMINISTRATOR_NAME: validation-deployment-principal
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Compile and lint templates
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az bicep install
+            az bicep lint --file infra/main.bicep
+            az bicep build --file infra/main.bicep --outfile /tmp/main.json
+            az bicep build-params --file infra/parameters/dev.bicepparam --outfile /tmp/dev.json
+            az bicep build-params --file infra/parameters/prod.bicepparam --outfile /tmp/prod.json

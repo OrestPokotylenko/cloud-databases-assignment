@@ -1,6 +1,152 @@
 @OnlineStore.API_HostAddress = http://localhost:5053
 
-GET {{OnlineStore.API_HostAddress}}/weatherforecast/
+### Create a customer
+POST {{OnlineStore.API_HostAddress}}/api/v1/customers
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "email": "john@example.com"
+}
+
+### Get or update a customer by public ID
+@CustomerId = 00000000-0000-0000-0000-000000000000
+
+GET {{OnlineStore.API_HostAddress}}/api/v1/customers/{{CustomerId}}
 Accept: application/json
 
 ###
+PATCH {{OnlineStore.API_HostAddress}}/api/v1/customers/{{CustomerId}}
+Content-Type: application/json
+
+{
+  "email": "john.smith@example.com"
+}
+
+### Create a product
+POST {{OnlineStore.API_HostAddress}}/api/v1/products
+Content-Type: application/json
+
+{
+  "name": "Cloud Widget",
+  "description": "A sample product",
+  "price": 19.95,
+  "stockQuantity": 25
+}
+
+### List products
+GET {{OnlineStore.API_HostAddress}}/api/v1/products?pageNumber=1&pageSize=20
+Accept: application/json
+
+### Get, update, or delete a product by its public ID
+@ProductId = 00000000-0000-0000-0000-000000000000
+
+GET {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}
+Accept: application/json
+
+###
+PUT {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}
+Content-Type: application/json
+
+{
+  "name": "Updated Cloud Widget",
+  "description": "Updated sample product",
+  "price": 24.95,
+  "stockQuantity": 20
+}
+
+###
+DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}
+
+### Request a direct product image upload
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/images/upload
+Content-Type: application/json
+
+{
+  "contentType": "image/jpeg",
+  "sizeBytes": 125000
+}
+
+### Upload directly to the uploadUrl returned above
+# Replace both values with the values from the upload request response.
+@ImageId = 00000000-0000-0000-0000-000000000000
+@UploadUrl = https://storage.example/product-images/blob?sas-token
+
+PUT {{UploadUrl}}
+x-ms-blob-type: BlockBlob
+Content-Type: image/jpeg
+
+< ./sample-product.jpg
+
+### Confirm the Blob upload and create its SQL metadata
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/images/{{ImageId}}/confirm
+
+### Select the primary image
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/images/{{ImageId}}/primary
+
+### Delete the Blob and its SQL metadata
+DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/images/{{ImageId}}
+
+### Create an anonymous product review
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/reviews
+Content-Type: application/json
+
+{
+  "comment": "Very useful product",
+  "rating": 4
+}
+
+### List a product's reviews
+GET {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/reviews?pageSize=20
+Accept: application/json
+
+### Continue listing reviews
+@ReviewContinuationToken = replace-with-token-from-the-previous-response
+GET {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/reviews?pageSize=20&continuationToken={{ReviewContinuationToken}}
+Accept: application/json
+
+### Delete a product review
+@ReviewId = 00000000-0000-0000-0000-000000000000
+DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/reviews/{{ReviewId}}
+
+### Create an order
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders
+Content-Type: application/json
+
+{
+  "customerPublicId": "{{CustomerId}}",
+  "deliveryAddress": {
+    "street": "Example Street",
+    "houseNumber": "10",
+    "addition": "A",
+    "postalCode": "1000 AA",
+    "city": "Amsterdam",
+    "countryCode": "NL"
+  },
+  "items": [
+    {
+      "productPublicId": "{{ProductId}}",
+      "quantity": 2
+    }
+  ]
+}
+
+### List orders
+GET {{OnlineStore.API_HostAddress}}/api/v1/orders?pageNumber=1&pageSize=20
+Accept: application/json
+
+### Get an order
+@OrderId = 00000000-0000-0000-0000-000000000000
+
+GET {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}
+Accept: application/json
+
+### Process an order
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}/process
+
+### Ship a processing order
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}/ship
+
+### Cancel a pending or processing order
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders/{{OrderId}}/cancel

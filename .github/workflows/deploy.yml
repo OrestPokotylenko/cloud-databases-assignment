@@ -1,0 +1,247 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  contents: read
+  id-token: write
+  security-events: write
+
+concurrency:
+  group: deploy-${{ inputs.environment || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  validation:
+    uses: ./.github/workflows/_validation.yml
+
+  deploy:
+    name: Deploy ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || 'dev') }}
+    needs: validation
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || 'dev') }}
+    env:
+      DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment || (github.ref_name == 'main' && 'prod' || 'dev') }}
+      AZURE_AUTHORITY_HOST: https://login.microsoftonline.com/
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SQL_ADMINISTRATOR_NAME: ${{ vars.AZURE_SQL_ADMINISTRATOR_NAME }}
+      DOTNET_NOLOGO: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate Azure deployment
+        run: |
+          az deployment sub validate \
+            --name "validate-${DEPLOYMENT_ENVIRONMENT}-${GITHUB_RUN_ID}" \
+            --location francecentral \
+            --template-file infra/main.bicep \
+            --parameters "infra/parameters/${DEPLOYMENT_ENVIRONMENT}.bicepparam"
+
+      - name: Deploy infrastructure
+        id: infrastructure
+        shell: bash
+        run: |
+          deployment_name="deploy-onlinestore-${DEPLOYMENT_ENVIRONMENT}-${GITHUB_RUN_NUMBER}"
+          resource_group="rg-onlinestore-${DEPLOYMENT_ENVIRONMENT}"
+
+          if ! az deployment sub create \
+              --name "$deployment_name" \
+              --location francecentral \
+              --template-file infra/main.bicep \
+              --parameters "infra/parameters/${DEPLOYMENT_ENVIRONMENT}.bicepparam"; then
+            az deployment sub show \
+              --name "$deployment_name" \
+              --query properties.error \
+              --output jsonc || true
+
+            az deployment group show \
+              --resource-group "$resource_group" \
+              --name "workload-${DEPLOYMENT_ENVIRONMENT}" \
+              --query properties.error \
+              --output jsonc || true
+
+            for module_name in container-platform function-app sql storage; do
+              az deployment group show \
+                --resource-group "$resource_group" \
+                --name "$module_name" \
+                --query properties.error \
+                --output jsonc || true
+            done
+
+            exit 1
+          fi
+
+          echo "deployment_name=$deployment_name" >> "$GITHUB_OUTPUT"
+          echo "api_url=$(az deployment sub show --name "$deployment_name" --query properties.outputs.apiUrl.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "api_identity_client_id=$(az deployment sub show --name "$deployment_name" --query properties.outputs.apiIdentityClientId.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "api_identity_name=$(az deployment sub show --name "$deployment_name" --query properties.outputs.apiIdentityName.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "container_app_name=$(az deployment sub show --name "$deployment_name" --query properties.outputs.containerAppName.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "container_registry_name=$(az deployment sub show --name "$deployment_name" --query properties.outputs.containerRegistryName.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "function_app_name=$(az deployment sub show --name "$deployment_name" --query properties.outputs.functionAppName.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "function_identity_client_id=$(az deployment sub show --name "$deployment_name" --query properties.outputs.functionIdentityClientId.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "function_identity_name=$(az deployment sub show --name "$deployment_name" --query properties.outputs.functionIdentityName.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "resource_group=$(az deployment sub show --name "$deployment_name" --query properties.outputs.resourceGroupName.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "sql_database_name=$(az deployment sub show --name "$deployment_name" --query properties.outputs.sqlDatabaseName.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "sql_server_fqdn=$(az deployment sub show --name "$deployment_name" --query properties.outputs.sqlServerFullyQualifiedDomainName.value --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "sql_server_name=$(az deployment sub show --name "$deployment_name" --query properties.outputs.sqlServerName.value --output tsv)" >> "$GITHUB_OUTPUT"
+
+      - name: Allow migration runner through SQL firewall
+        id: migration_firewall
+        shell: bash
+        run: |
+          runner_ip="$(curl --fail --silent --show-error https://api.ipify.org)"
+          rule_name="github-${GITHUB_RUN_ID}"
+
+          az sql server firewall-rule create \
+            --resource-group "${{ steps.infrastructure.outputs.resource_group }}" \
+            --server "${{ steps.infrastructure.outputs.sql_server_name }}" \
+            --name "$rule_name" \
+            --start-ip-address "$runner_ip" \
+            --end-ip-address "$runner_ip"
+
+          echo "rule_name=$rule_name" >> "$GITHUB_OUTPUT"
+
+      - name: Apply EF Core migrations
+        shell: bash
+        env:
+          Database__ConnectionString: Server=tcp:${{ steps.infrastructure.outputs.sql_server_fqdn }},1433;Initial Catalog=${{ steps.infrastructure.outputs.sql_database_name }};Authentication=Active Directory Default;MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+          Queues__ConnectionString: UseDevelopmentStorage=true
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.12
+          dotnet restore src/OnlineStore.API/OnlineStore.API.csproj \
+            --runtime linux-x64
+          dotnet ef migrations bundle \
+            --project src/OnlineStore.Persistence \
+            --startup-project src/OnlineStore.API \
+            --configuration Release \
+            --runtime linux-x64 \
+            --target-runtime linux-x64 \
+            --output "$RUNNER_TEMP/efbundle"
+
+          chmod +x "$RUNNER_TEMP/efbundle"
+          "$RUNNER_TEMP/efbundle" --connection "$Database__ConnectionString"
+
+      - name: Prepare SQL workload identity
+        shell: bash
+        run: |
+          token_file="$RUNNER_TEMP/azure-federated-token"
+          umask 077
+
+          curl --fail --silent --show-error \
+            --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange" \
+            | jq --exit-status --raw-output '.value' > "$token_file"
+
+          chmod 600 "$token_file"
+          echo "AZURE_FEDERATED_TOKEN_FILE=$token_file" >> "$GITHUB_ENV"
+
+      - name: Grant database access to managed identities
+        uses: azure/sql-action@v2.3
+        with:
+          connection-string: Server=tcp:${{ steps.infrastructure.outputs.sql_server_fqdn }},1433;Initial Catalog=${{ steps.infrastructure.outputs.sql_database_name }};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+          path: devops/sql/grant-managed-identities.sql
+          skip-firewall-check: true
+          arguments: >-
+            -v
+            ApiIdentityName="${{ steps.infrastructure.outputs.api_identity_name }}"
+            ApiIdentityClientId="${{ steps.infrastructure.outputs.api_identity_client_id }}"
+            FunctionIdentityName="${{ steps.infrastructure.outputs.function_identity_name }}"
+            FunctionIdentityClientId="${{ steps.infrastructure.outputs.function_identity_client_id }}"
+
+      - name: Remove SQL workload identity token
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [[ -n "${AZURE_FEDERATED_TOKEN_FILE:-}" ]]; then
+            rm -f -- "$AZURE_FEDERATED_TOKEN_FILE"
+          fi
+
+      - name: Remove migration firewall rule
+        if: ${{ always() && steps.migration_firewall.outputs.rule_name != '' }}
+        run: |
+          az sql server firewall-rule delete \
+            --resource-group "${{ steps.infrastructure.outputs.resource_group }}" \
+            --server "${{ steps.infrastructure.outputs.sql_server_name }}" \
+            --name "${{ steps.migration_firewall.outputs.rule_name }}"
+
+      - name: Build and push API image
+        id: api_image
+        shell: bash
+        run: |
+          registry_name="${{ steps.infrastructure.outputs.container_registry_name }}"
+          login_server="$(az acr show --name "$registry_name" --query loginServer --output tsv)"
+          image="$login_server/online-store-api:${GITHUB_SHA}"
+
+          az acr login --name "$registry_name"
+
+          docker build \
+            --file src/OnlineStore.API/Dockerfile \
+            --tag "$image" \
+            .
+
+          docker push "$image"
+
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy API image declaratively
+        run: |
+          az deployment sub create \
+            --name "${{ steps.infrastructure.outputs.deployment_name }}-image" \
+            --location francecentral \
+            --template-file infra/main.bicep \
+            --parameters "infra/parameters/${DEPLOYMENT_ENVIRONMENT}.bicepparam" \
+            --parameters apiImage="${{ steps.api_image.outputs.image }}"
+
+      - name: Publish Azure Functions
+        run: >-
+          dotnet publish src/OnlineStore.Functions/OnlineStore.Functions.csproj
+          --configuration Release
+          --output "${{ runner.temp }}/functions"
+
+      - name: Deploy Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ steps.infrastructure.outputs.function_app_name }}
+          package: ${{ runner.temp }}/functions
+          sku: flexconsumption
+          remote-build: false
+
+      - name: Write deployment summary
+        run: |
+          echo "## Deployment complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Environment: $DEPLOYMENT_ENVIRONMENT" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: ${{ steps.infrastructure.outputs.api_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Function App: ${{ steps.infrastructure.outputs.function_app_name }}" >> "$GITHUB_STEP_SUMMARY"

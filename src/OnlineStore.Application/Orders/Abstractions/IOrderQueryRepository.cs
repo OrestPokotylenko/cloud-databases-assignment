@@ -1,0 +1,17 @@
+namespace OnlineStore.Application.Orders.Abstractions;
+
+public interface IOrderQueryRepository
+{
+    Task<OrderData?> GetByPublicIdAsync(
+        Guid publicId,
+        CancellationToken ct);
+
+    Task<OrderPageData> GetPageAsync(
+        int skip,
+        int take,
+        CancellationToken ct);
+
+    Task<bool> ExistsAsync(
+        Guid publicId,
+        CancellationToken ct);
+}
