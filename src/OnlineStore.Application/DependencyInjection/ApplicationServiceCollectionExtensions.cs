@@ -14,6 +14,7 @@ public static class ApplicationServiceCollectionExtensions
 
         services.AddOrderServices();
         services.AddProductServices();
+        services.AddProductReviewServices();
 
         return services;
     }

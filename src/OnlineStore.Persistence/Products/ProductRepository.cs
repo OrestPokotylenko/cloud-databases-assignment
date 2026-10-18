@@ -10,6 +10,13 @@ public class ProductRepository(
     OnlineStoreDbContext context)
     : IProductCommandRepository, IProductQueryRepository
 {
+    public Task<bool> ExistsAsync(
+        Guid publicId,
+        CancellationToken ct) =>
+        context.Products
+            .AsNoTracking()
+            .AnyAsync(product => product.PublicId == publicId, ct);
+
     public async Task<Guid> AddAsync(
         Product product,
         CancellationToken ct)

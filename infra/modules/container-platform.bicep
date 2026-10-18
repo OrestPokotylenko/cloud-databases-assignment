@@ -6,6 +6,7 @@ param databaseServerFullyQualifiedDomainName string
 param environmentName string
 param location string
 param productImageContainerName string
+param productReviewTableName string
 
 @secure()
 param storageConnectionString string
@@ -137,6 +138,14 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'ProductImages__ContainerName'
               value: productImageContainerName
+            }
+            {
+              name: 'ProductReviews__ConnectionString'
+              secretRef: 'storage-connection'
+            }
+            {
+              name: 'ProductReviews__TableName'
+              value: productReviewTableName
             }
           ]
           resources: {

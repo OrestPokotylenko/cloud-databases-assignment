@@ -1,6 +1,7 @@
 param environmentName string
 param location string
 param productImageContainerName string
+param productReviewTableName string
 param queueNames array
 param resourceSuffix string
 
@@ -81,6 +82,18 @@ resource queues 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-05-
   parent: queueService
   name: queueName
 }]
+
+resource tableService 'Microsoft.Storage/storageAccounts/tableServices@2023-05-01' = {
+  parent: storageAccount
+  name: 'default'
+  properties: {}
+}
+
+resource productReviewTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-01' = {
+  parent: tableService
+  name: productReviewTableName
+  properties: {}
+}
 
 @secure()
 output connectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
