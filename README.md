@@ -1,90 +1,104 @@
-# Online Store cloud databases assignment
+# Online Store Cloud Databases POC
 
-The customer, product, review, and order features are exposed through an ASP.NET
-Core Web API. Relational data uses SQL Server through Entity Framework Core,
-while reviews use Azure Table Storage. The features follow the solution's
-Domain, Application, Persistence, ExternalServices, and API layers. Commands
-and queries are handled separately and dispatched by the application request
-sender registered through dependency injection.
+## 1. Project Overview
 
-## Customer endpoints
+This project is an ASP.NET Core online store POC deployed with Azure Container
+Apps and Azure Functions. It uses Azure SQL, Blob Storage, Table Storage, and
+Queue Storage.
 
-- `POST /api/v1/customers`
-- `GET /api/v1/customers/{publicId}`
-- `PATCH /api/v1/customers/{publicId}`
+The solution is divided into `Domain`, `Application`, `Persistence`,
+`ExternalServices`, `API`, and `Functions` layers.
 
-Customers are stored in SQL Server with unique public IDs and normalized,
-unique email addresses. Authentication, passwords, roles, payment methods, and
-saved addresses are intentionally outside this POC. Orders receive a customer
-public ID through the API, resolve it to the internal SQL customer ID, and store
-that ID as their foreign key. The delivery address remains an order snapshot
-because it describes the destination for that specific order.
+## 2. Storage Architecture
 
-Customer information is currently available through this API only. A production
-integration with another department could use a dedicated API, events/messages,
-or an integration service without granting direct access to this database.
+### Azure SQL
 
-## Product endpoints
+Azure SQL stores products, customers, orders, order items, product-image
+metadata, and processed-message records. These features require relational
+constraints, transactions, and consistent updates such as atomic order and
+stock changes.
 
-- `GET /api/v1/products?pageNumber=1&pageSize=20`
-- `GET /api/v1/products/{publicId}`
-- `POST /api/v1/products`
-- `PUT /api/v1/products/{publicId}`
-- `DELETE /api/v1/products/{publicId}`
-- `POST /api/v1/products/{publicId}/images/upload`
-- `POST /api/v1/products/{publicId}/images/{imagePublicId}/confirm`
-- `DELETE /api/v1/products/{publicId}/images/{imagePublicId}`
-- `POST /api/v1/products/{publicId}/images/{imagePublicId}/primary`
-- `POST /api/v1/products/{publicId}/reviews`
-- `GET /api/v1/products/{publicId}/reviews?pageSize=20&continuationToken=...`
-- `DELETE /api/v1/products/{publicId}/reviews/{reviewPublicId}`
+### Blob Storage
 
-Page sizes are limited to 100 records. API consumers use the product's
-`publicId`; the SQL identity key remains an implementation detail.
+Blob Storage contains the product image files. Blobs use this naming strategy:
 
-Product image metadata is stored in SQL Server while the image bytes are stored
-in the public-read `product-images` Blob container. Uploads do not pass through
-the API. The API returns a short-lived, write-only SAS URL for one blob; the
-client uploads to that URL and then confirms the upload with the API. Public
-image URLs returned by the API point directly to Blob Storage.
+```text
+{productPublicId}/{imagePublicId}
+```
 
-Anonymous product reviews are stored in the `productreviews` Azure Table. Azure
-Table names only permit alphanumeric characters, so the intended
-`product-reviews` name cannot be used. A product public ID is the partition key
-and a review public ID is the row key. This makes retrieving reviews for one
-product efficient and supports native continuation-token pagination without
-SQL-style offsets. The design intentionally does not optimize cross-product
-analytics. If global low-rating or marketing analysis is required later, review
-data should be exported through a separate analytical pipeline or store.
+The API issues a short-lived SAS URL so clients upload image bytes directly to
+Blob Storage. Image metadata is confirmed separately through the API.
 
-## Order endpoints
+### Table Storage
 
-- `GET /api/v1/orders?pageNumber=1&pageSize=20`
-- `GET /api/v1/orders/{publicId}`
-- `POST /api/v1/orders`
-- `POST /api/v1/orders/{publicId}/process`
-- `POST /api/v1/orders/{publicId}/ship`
-- `POST /api/v1/orders/{publicId}/cancel`
+Table Storage contains anonymous product reviews:
 
-Order creation and explicit order actions return `202 Accepted`. They are published to
-Azure Storage Queues and processed by `CreateOrderFunction` and
-`UpdateOrderFunction`. Creation verifies and decrements product stock in
-the same SQL transaction as the order insert. A customer must exist before the
-create command is queued, and the Function stores the customer's internal SQL
-ID on the order. Cancelling an unshipped order
-restores its stock atomically. The domain entity permits only pending orders to
-be processed, processing orders to be shipped, and pending or processing orders
-to be cancelled. Shipped and cancelled orders are terminal.
+```text
+PartitionKey = ProductPublicId
+RowKey       = ReviewPublicId
+```
 
-Azure Storage Queues provide at-least-once delivery, so a message can be
-delivered again. Each command therefore carries a `MessageId`, and the
-`ProcessedMessages` SQL table is an infrastructure-only idempotency ledger.
-The ledger entry and the order change are committed in the same transaction.
+Partitioning by product matches the main access pattern: retrieving the reviews
+for one product. Review lists use Table Storage continuation-token pagination.
 
-## Local setup
+### Queue Storage
 
-Store the SQL Server connection string in ASP.NET Core User Secrets. The API
-project already has a `UserSecretsId`, so run this once from the repository
+Queue Storage buffers asynchronous order creation and status changes:
+
+```text
+API → Queue Storage → Azure Function → Azure SQL
+```
+
+This allows the API to accept order writes quickly and absorb traffic peaks.
+
+## 3. CQRS and Azure Functions
+
+Commands and queries are separate application operations. `IRequestSender`
+acts as the mediator and dispatches each request to its registered handler.
+
+`CreateOrderFunction` processes order creation, while `UpdateOrderFunction`
+processes explicit process, ship, and cancel actions. Queue messages include a
+`MessageId`; the SQL `ProcessedMessages` table prevents the same message from
+being applied twice. The processed-message record and the corresponding order
+change are committed in the same SQL transaction.
+
+## 4. Scalability and Partitioning
+
+- Table Storage reviews are partitioned by `ProductPublicId`.
+- Queue Storage buffers order-write spikes.
+- Azure SQL uses one database for this POC.
+
+SQL sharding is not implemented because the current POC does not require it.
+Horizontal SQL partitioning could be introduced later if throughput required it.
+
+## 5. Azure Resource Sizing
+
+The resources are intentionally small for this POC:
+
+- Container App: 0.5 vCPU, 1 GiB, 0–2 replicas.
+- Functions: Flex Consumption, 2,048 MB instances.
+- Azure SQL: General Purpose Serverless, 0.5–2 vCores, auto-pause enabled.
+
+## 6. POC / Production Notes
+
+Blob Storage CORS currently uses `allowedOrigins = *`. Production should limit
+this to the frontend domain. Public product-image reads are intentional because
+the images are public website assets. Shared Key access is enabled where needed
+to generate upload SAS URLs.
+
+## 7. Main API Features
+
+- Products: CRUD, pagination, and multiple images with primary-image selection.
+- Customers: create, get, and partial update.
+- Reviews: create, continuation-token list, and delete.
+- Orders: asynchronous create, process, ship, and cancel operations.
+
+All routes are versioned under `/api/v1`. Example requests are available in
+`src/OnlineStore.API/OnlineStore.API.http`.
+
+## 8. Local Setup
+
+Start SQL Server and Azurite, then configure API secrets from the repository
 root:
 
 ```powershell
@@ -92,33 +106,17 @@ dotnet user-secrets set "Database:ConnectionString" `
   "Server=.\SQLEXPRESS;Database=OnlineStore;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True" `
   --project src/OnlineStore.API
 
-dotnet user-secrets set "Queues:ConnectionString" `
-  "UseDevelopmentStorage=true" `
+dotnet user-secrets set "Queues:ConnectionString" "UseDevelopmentStorage=true" `
   --project src/OnlineStore.API
 
-dotnet user-secrets set "ProductImages:ConnectionString" `
-  "UseDevelopmentStorage=true" `
+dotnet user-secrets set "ProductImages:ConnectionString" "UseDevelopmentStorage=true" `
   --project src/OnlineStore.API
 
-dotnet user-secrets set "ProductReviews:ConnectionString" `
-  "UseDevelopmentStorage=true" `
+dotnet user-secrets set "ProductReviews:ConnectionString" "UseDevelopmentStorage=true" `
   --project src/OnlineStore.API
 ```
 
-User Secrets are stored outside the repository and must not be committed. In a
-deployed API environment, provide the settings through the platform's secure
-configuration using `Database__ConnectionString` and
-`Queues__ConnectionString`. The image feature uses
-`ProductImages__ConnectionString`, and reviews use
-`ProductReviews__ConnectionString`. Queue names are non-secret options in
-`appsettings.json`; override them with `Queues__CreateOrderQueueName` and
-`Queues__OrderUpdateQueueName` when needed. The local Functions host also needs
-`AzureWebJobsStorage` and `FUNCTIONS_WORKER_RUNTIME`; the deployed Flex
-Consumption runtime is configured through `functionAppConfig` instead.
-
-Install and start Azurite for local Azure Storage Queue development. The
-Functions host needs these local settings through environment variables or an
-ignored `local.settings.json`:
+Create an ignored `src/OnlineStore.Functions/local.settings.json`:
 
 ```json
 {
@@ -134,6 +132,8 @@ ignored `local.settings.json`:
 }
 ```
 
+Apply migrations and run the projects:
+
 ```powershell
 dotnet ef database update `
   --project src/OnlineStore.Persistence `
@@ -142,109 +142,26 @@ dotnet ef database update `
 
 dotnet run --project src/OnlineStore.API
 dotnet run --project src/OnlineStore.Functions
-dotnet run --project tests/OnlineStore.Application.UnitTests
+dotnet test tests/OnlineStore.Application.UnitTests
 ```
 
-Example requests are in `src/OnlineStore.API/OnlineStore.API.http`.
+## 9. Azure Deployment
 
-## Continuous integration
+Bicep and GitHub Actions deploy the Container App, Function App, Azure SQL
+database, and Storage Account with its Blob container, Table, and Queues. Pull
+requests run build, test, security, container, and Bicep validation. Pushes to
+`develop` deploy `dev`; pushes to `main` deploy `prod`.
 
-Pull requests targeting `develop` or `main` run the modular validation workflow
-in `.github/workflows/_validation.yml`. It contains independent jobs for:
+## 10. Architecture Diagram
 
-- restoring and building the .NET solution and API container;
-- running the xUnit v3 tests;
-- auditing direct and transitive NuGet dependencies and running CodeQL;
-- linting and compiling the Bicep template and both parameter files.
-
-The deployment workflow calls the same reusable validation workflow before it
-can deploy. A push to `develop` deploys `dev`, while a push to `main` deploys
-`prod`. Either environment can also be selected manually through
-`workflow_dispatch`.
-
-## Azure infrastructure
-
-The subscription-scoped entry point is `infra/main.bicep`. Its modules deploy:
-
-- an Azure Container Apps consumption environment and the API Container App;
-- an Azure Container Registry used for the API image;
-- one Flex Consumption Function App containing `CreateOrderFunction` and
-  `UpdateOrderFunction`;
-- an LRS StorageV2 account with the two order queues, Functions deployment
-  container, public-read `product-images` Blob container, and `productreviews`
-  Table Storage table;
-- an Azure SQL logical server and serverless General Purpose database;
-- Microsoft Entra-only SQL authentication;
-- managed identities and least-scope pull, deployment, and database permissions;
-- a Container Apps environment with live log streaming and no persisted log workspace.
-
-Azure resources use the `<type>-onlinestore-<environment>` naming convention.
-Globally scoped names add a deterministic five-character suffix, and resources
-that don't allow hyphens omit them. Examples include `func-onlinestore-dev-abc12`,
-`ca-onlinestore-dev`, `cae-onlinestore-dev`, `sql-onlinestore-dev-abc12`,
-`sqldb-onlinestore-dev`, `id-onlinestore-api-dev`, and
-`stonlinestoredevabc12`.
-
-The `dev.bicepparam` and `prod.bicepparam` files contain separate
-`containerAppSettings`, `functionAppSettings`, and `sqlSettings` objects. Their
-values are currently identical:
-
-- Container App: France Central, Consumption, 0.5 vCPU, 1 GiB, zero minimum
-  replicas and 2 maximum replicas.
-- Functions: France Central, Flex Consumption, 2,048 MB instances.
-- SQL: General Purpose serverless, 0.5 minimum and 2 maximum vCores, 5 GiB,
-  locally redundant backup storage, and a 30-minute auto-pause delay.
-
-The deployment user-assigned managed identity is configured as the Azure SQL
-Microsoft Entra administrator. The API and Functions use their own
-user-assigned managed identities to connect to SQL, so there is no SQL username
-or password to store. Bicep needs the deployment identity's name and client ID
-when compiling the environment parameter files. To validate locally:
-
-```powershell
-$env:AZURE_CLIENT_ID = '<managed-identity-client-id>'
-$env:AZURE_SQL_ADMINISTRATOR_NAME = '<managed-identity-name>'
-az bicep lint --file infra/main.bicep
-az bicep build --file infra/main.bicep
-az bicep build-params --file infra/parameters/dev.bicepparam
-```
-
-You can retrieve the identity name and client ID after signing in to Azure:
-
-```powershell
-az identity show `
-  --resource-group '<bootstrap-resource-group>' `
-  --name '<managed-identity-name>' `
-  --query '{name:name, clientId:clientId}' `
-  --output json
-```
-
-Create protected GitHub environments named `dev` and `prod`, each with these
-secrets:
-
-- `AZURE_CLIENT_ID`
-- `AZURE_TENANT_ID`
-- `AZURE_SUBSCRIPTION_ID`
-
-Add this non-secret environment variable to both GitHub environments:
-
-- `AZURE_SQL_ADMINISTRATOR_NAME`
-
-The Azure identity is authenticated through GitHub OIDC. It needs permission
-to deploy resources and create the narrowly scoped managed-identity role
-assignments; `Contributor` plus `User Access Administrator` at the target
-subscription is sufficient for this assignment deployment.
-
-The deployment workflow validates the real Azure deployment, provisions the
-infrastructure, and applies EF Core migrations through a temporary SQL firewall
-rule using the OIDC-authenticated Azure CLI identity. It then creates contained
-database users for the API and Functions managed identities from their client
-IDs, without requiring Microsoft Graph directory permissions. Finally, it
-builds the API image in ACR, updates the Container App declaratively, and
-publishes the Functions package.
-
-The API container can also be built locally from the repository root:
-
-```powershell
-docker build -f src/OnlineStore.API/Dockerfile -t online-store-api .
+```mermaid
+flowchart TD
+    Client[Client] --> API[ASP.NET Core API<br/>Azure Container Apps]
+    API --> SQL[(Azure SQL)]
+    API --> Table[(Table Storage<br/>Product Reviews)]
+    API -->|SAS / metadata| Blob[(Blob Storage<br/>Product Images)]
+    Client <-->|Direct image upload and read| Blob
+    API --> Queue[Queue Storage]
+    Queue --> Functions[Azure Functions]
+    Functions --> SQL
 ```
