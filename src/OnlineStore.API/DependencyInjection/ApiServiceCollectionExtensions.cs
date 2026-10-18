@@ -43,6 +43,7 @@ public static class ApiServiceCollectionExtensions
         services.AddApplicationServices();
         services.AddQueueServices();
         services.AddProductImageStorageServices();
+        services.AddProductReviewStorageServices();
         services.AddPersistenceServices();
 
         return services;

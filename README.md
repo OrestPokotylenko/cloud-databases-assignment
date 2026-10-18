@@ -15,9 +15,11 @@ injection.
 - `DELETE /api/v1/products/{publicId}`
 - `POST /api/v1/products/{publicId}/images/upload`
 - `POST /api/v1/products/{publicId}/images/{imagePublicId}/confirm`
-- `GET /api/v1/products/{publicId}/images`
 - `DELETE /api/v1/products/{publicId}/images/{imagePublicId}`
 - `POST /api/v1/products/{publicId}/images/{imagePublicId}/primary`
+- `POST /api/v1/products/{publicId}/reviews`
+- `GET /api/v1/products/{publicId}/reviews?pageSize=20&continuationToken=...`
+- `DELETE /api/v1/products/{publicId}/reviews/{reviewPublicId}`
 
 Page sizes are limited to 100 records. API consumers use the product's
 `publicId`; the SQL identity key remains an implementation detail.
@@ -27,6 +29,15 @@ in the public-read `product-images` Blob container. Uploads do not pass through
 the API. The API returns a short-lived, write-only SAS URL for one blob; the
 client uploads to that URL and then confirms the upload with the API. Public
 image URLs returned by the API point directly to Blob Storage.
+
+Anonymous product reviews are stored in the `productreviews` Azure Table. Azure
+Table names only permit alphanumeric characters, so the intended
+`product-reviews` name cannot be used. A product public ID is the partition key
+and a review public ID is the row key. This makes retrieving reviews for one
+product efficient and supports native continuation-token pagination without
+SQL-style offsets. The design intentionally does not optimize cross-product
+analytics. If global low-rating or marketing analysis is required later, review
+data should be exported through a separate analytical pipeline or store.
 
 ## Order endpoints
 
@@ -68,13 +79,18 @@ dotnet user-secrets set "Queues:ConnectionString" `
 dotnet user-secrets set "ProductImages:ConnectionString" `
   "UseDevelopmentStorage=true" `
   --project src/OnlineStore.API
+
+dotnet user-secrets set "ProductReviews:ConnectionString" `
+  "UseDevelopmentStorage=true" `
+  --project src/OnlineStore.API
 ```
 
 User Secrets are stored outside the repository and must not be committed. In a
 deployed API environment, provide the settings through the platform's secure
 configuration using `Database__ConnectionString` and
 `Queues__ConnectionString`. The image feature uses
-`ProductImages__ConnectionString`. Queue names are non-secret options in
+`ProductImages__ConnectionString`, and reviews use
+`ProductReviews__ConnectionString`. Queue names are non-secret options in
 `appsettings.json`; override them with `Queues__CreateOrderQueueName` and
 `Queues__OrderUpdateQueueName` when needed. The local Functions host also needs
 `AzureWebJobsStorage` and `FUNCTIONS_WORKER_RUNTIME`; the deployed Flex
@@ -135,7 +151,8 @@ The subscription-scoped entry point is `infra/main.bicep`. Its modules deploy:
 - one Flex Consumption Function App containing `CreateOrderFunction` and
   `UpdateOrderFunction`;
 - an LRS StorageV2 account with the two order queues, Functions deployment
-  container, and public-read `product-images` Blob container;
+  container, public-read `product-images` Blob container, and `productreviews`
+  Table Storage table;
 - an Azure SQL logical server and serverless General Purpose database;
 - Microsoft Entra-only SQL authentication;
 - managed identities and least-scope pull, deployment, and database permissions;
