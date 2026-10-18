@@ -35,6 +35,39 @@ Content-Type: application/json
 ###
 DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}
 
+### Request a direct product image upload
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/images/upload
+Content-Type: application/json
+
+{
+  "contentType": "image/jpeg",
+  "sizeBytes": 125000
+}
+
+### Upload directly to the uploadUrl returned above
+# Replace both values with the values from the upload request response.
+@ImageId = 00000000-0000-0000-0000-000000000000
+@UploadUrl = https://storage.example/product-images/blob?sas-token
+
+PUT {{UploadUrl}}
+x-ms-blob-type: BlockBlob
+Content-Type: image/jpeg
+
+< ./sample-product.jpg
+
+### Confirm the Blob upload and create its SQL metadata
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/images/{{ImageId}}/confirm
+
+### List a product's images and direct public Blob URLs
+GET {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/images
+Accept: application/json
+
+### Select the primary image
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/images/{{ImageId}}/primary
+
+### Delete the Blob and its SQL metadata
+DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{ProductId}}/images/{{ImageId}}
+
 ### Create an order
 POST {{OnlineStore.API_HostAddress}}/api/v1/orders
 Content-Type: application/json

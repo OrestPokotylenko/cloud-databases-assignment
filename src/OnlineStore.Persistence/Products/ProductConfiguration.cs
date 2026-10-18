@@ -44,6 +44,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasIndex(e => new { e.CreatedAt, e.Id })
             .IsDescending();
 
+        builder.HasMany(e => e.Images)
+            .WithOne()
+            .HasForeignKey(e => e.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.ToTable("Products", tableBuilder =>
         {
             tableBuilder.HasCheckConstraint(

@@ -5,9 +5,10 @@ param databaseName string
 param databaseServerFullyQualifiedDomainName string
 param environmentName string
 param location string
+param productImageContainerName string
 
 @secure()
-param queueStorageConnectionString string
+param storageConnectionString string
 
 param resourceSuffix string
 param orderUpdateQueueName string
@@ -98,8 +99,8 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       ]
       secrets: [
         {
-          name: 'queue-storage-connection'
-          value: queueStorageConnectionString
+          name: 'storage-connection'
+          value: storageConnectionString
         }
       ]
     }
@@ -119,7 +120,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'Queues__ConnectionString'
-              secretRef: 'queue-storage-connection'
+              secretRef: 'storage-connection'
             }
             {
               name: 'Queues__CreateOrderQueueName'
@@ -128,6 +129,14 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'Queues__OrderUpdateQueueName'
               value: orderUpdateQueueName
+            }
+            {
+              name: 'ProductImages__ConnectionString'
+              secretRef: 'storage-connection'
+            }
+            {
+              name: 'ProductImages__ContainerName'
+              value: productImageContainerName
             }
           ]
           resources: {
