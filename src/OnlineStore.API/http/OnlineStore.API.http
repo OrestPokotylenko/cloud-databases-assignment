@@ -1,0 +1,148 @@
+@OnlineStore.API_HostAddress = https://ca-onlinestore-prod.victoriouswater-b2e930ae.francecentral.azurecontainerapps.io
+
+# Send a named create request before sending requests that use its response.
+# Dependent requests automatically read IDs and URLs from the latest response.
+
+### Create a customer
+# @name createCustomer
+POST {{OnlineStore.API_HostAddress}}/api/v1/customers
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "email": "john.{{$randomInt 100000 999999}}@example.com"
+}
+
+### Get or update a customer by public ID
+GET {{OnlineStore.API_HostAddress}}/api/v1/customers/{{createCustomer.response.body.$.publicId}}
+Accept: application/json
+
+###
+PATCH {{OnlineStore.API_HostAddress}}/api/v1/customers/{{createCustomer.response.body.$.publicId}}
+Content-Type: application/json
+
+{
+  "email": "john.smith.{{$randomInt 100000 999999}}@example.com"
+}
+
+### Create a product
+# @name createProduct
+POST {{OnlineStore.API_HostAddress}}/api/v1/products
+Content-Type: application/json
+
+{
+  "name": "Cloud Widget",
+  "description": "A sample product",
+  "price": 19.95,
+  "stockQuantity": 25
+}
+
+### List products
+GET {{OnlineStore.API_HostAddress}}/api/v1/products?pageNumber=1&pageSize=20
+Accept: application/json
+
+### Get, update, or delete a product by its public ID
+GET {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}
+Accept: application/json
+
+###
+PUT {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}
+Content-Type: application/json
+
+{
+  "name": "Updated Cloud Widget",
+  "description": "Updated sample product",
+  "price": 24.95,
+  "stockQuantity": 20
+}
+
+###
+DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}
+
+### Request a direct product image upload
+# sizeBytes must match assets/sample-product.jpeg.
+# @name requestImageUpload
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}/images/upload
+Content-Type: application/json
+
+{
+  "contentType": "image/jpeg",
+  "sizeBytes": 13248
+}
+
+### Upload directly to the uploadUrl returned above
+PUT {{requestImageUpload.response.body.$.uploadUrl}}
+x-ms-blob-type: BlockBlob
+Content-Type: image/jpeg
+
+< ./assets/sample-product.jpeg
+
+### Confirm the Blob upload and create its SQL metadata
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}/images/{{requestImageUpload.response.body.$.imageId}}/confirm
+
+### Select the primary image
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}/images/{{requestImageUpload.response.body.$.imageId}}/primary
+
+### Delete the Blob and its SQL metadata
+DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}/images/{{requestImageUpload.response.body.$.imageId}}
+
+### Create an anonymous product review
+# @name createProductReview
+POST {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}/reviews
+Content-Type: application/json
+
+{
+  "comment": "Very useful product",
+  "rating": 4
+}
+
+### List a product's reviews
+GET {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}/reviews?pageSize=20
+Accept: application/json
+
+### Delete a product review
+DELETE {{OnlineStore.API_HostAddress}}/api/v1/products/{{createProduct.response.body.$.publicId}}/reviews/{{createProductReview.response.body.$.publicId}}
+
+### Create an order
+# @name createOrder
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders
+Content-Type: application/json
+
+{
+  "customerPublicId": "{{createCustomer.response.body.$.publicId}}",
+  "deliveryAddress": {
+    "street": "Example Street",
+    "houseNumber": "10",
+    "addition": "A",
+    "postalCode": "1000 AA",
+    "city": "Amsterdam",
+    "countryCode": "NL"
+  },
+  "items": [
+    {
+      "productPublicId": "{{createProduct.response.body.$.publicId}}",
+      "quantity": 2
+    }
+  ]
+}
+
+### List orders
+GET {{OnlineStore.API_HostAddress}}/api/v1/orders?pageNumber=1&pageSize=20
+Accept: application/json
+
+### Get an order
+# Order creation is asynchronous. Retry this request until the order is available.
+GET {{OnlineStore.API_HostAddress}}/api/v1/orders/{{createOrder.response.body.$.publicId}}
+Accept: application/json
+
+### Process an order
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders/{{createOrder.response.body.$.publicId}}/process
+
+### Ship a processing order
+# Wait until the get-order response shows Processing before sending this request.
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders/{{createOrder.response.body.$.publicId}}/ship
+
+### Cancel a pending or processing order
+# Use this instead of shipping; Shipped and Cancelled are terminal states.
+POST {{OnlineStore.API_HostAddress}}/api/v1/orders/{{createOrder.response.body.$.publicId}}/cancel
