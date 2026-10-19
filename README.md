@@ -79,6 +79,18 @@ The resources are intentionally small for this POC:
 - Functions: Flex Consumption, 2,048 MB instances.
 - Azure SQL: General Purpose Serverless, 0.5–2 vCores, auto-pause enabled.
 
+The `dev` and `prod` parameter files intentionally use the same low-cost
+configuration for this POC. Despite the environment name, the current `prod`
+deployment is not production-grade sizing. A real production deployment would
+normally keep at least one API replica running and use provisioned Azure SQL
+compute, or otherwise disable auto-pause, based on its availability and latency
+requirements.
+
+The Container App can scale to zero and Azure SQL can pause after being idle.
+Consequently, the first API request after an idle period can take noticeably
+longer while the application and database start. Allow extra time or retry the
+request before treating it as a failure.
+
 ## 6. POC / Production Notes
 
 Blob Storage CORS currently uses `allowedOrigins = *`. Production should limit
@@ -94,7 +106,7 @@ to generate upload SAS URLs.
 - Orders: asynchronous create, process, ship, and cancel operations.
 
 All routes are versioned under `/api/v1`. Example requests are available in
-`src/OnlineStore.API/OnlineStore.API.http`.
+`src/OnlineStore.API/http/OnlineStore.API.http`.
 
 ## 8. Local Setup
 
